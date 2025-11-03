@@ -4,6 +4,8 @@ import {
   IsBoolean,
   IsArray,
   MaxLength,
+  IsNumber,
+  Min,
 } from 'class-validator';
 import { IsCuid } from '@app/contracts/decorators';
 
@@ -71,4 +73,9 @@ export class CreateDoctorProfileDto {
   @IsString({ each: true, message: 'Each location ID must be a string' })
   @IsOptional()
   locationIds?: string[];
+
+  @IsOptional()
+  @IsNumber({}, { message: 'appointmentDuration must be a number' })
+  @Min(1, { message: 'appointmentDuration must be at least 1 minute' })
+  appointmentDuration?: number;
 }

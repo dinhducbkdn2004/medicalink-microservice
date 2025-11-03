@@ -29,7 +29,6 @@ import {
   CreateQuestionDto,
   UpdateQuestionDto,
   CreateAnswerDto,
-  UpdateSelfAnswerDto,
   UpdateAnswerDto,
 } from '@app/contracts/dtos';
 
@@ -157,12 +156,12 @@ export class QuestionsController {
     );
   }
 
-  // Admin/Author - update answer
+  // Admin/Author - update answer - content only
   @RequireUpdatePermission('answers', { isSelf: true })
   @Patch('/answers/:answerId')
   async updateAnswer(
     @Param('answerId') answerId: string,
-    @Body() dto: UpdateAnswerDto,
+    @Body() dto: CreateAnswerDto,
   ) {
     return this.microserviceService.sendWithTimeout(
       this.contentClient,

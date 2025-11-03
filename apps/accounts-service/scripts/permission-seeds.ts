@@ -98,7 +98,32 @@ const CORE_PERMISSIONS = [
     action: 'manage',
     description: 'Full patient management access',
   },
-
+  // Office Hours
+  {
+    resource: 'office-hours',
+    action: 'create',
+    description: 'Create office hours',
+  },
+  {
+    resource: 'office-hours',
+    action: 'read',
+    description: 'View office hours',
+  },
+  {
+    resource: 'office-hours',
+    action: 'update',
+    description: 'Update office hours',
+  },
+  {
+    resource: 'office-hours',
+    action: 'delete',
+    description: 'Delete office hours',
+  },
+  {
+    resource: 'office-hours',
+    action: 'manage',
+    description: 'Full office hours management access',
+  },
   // Appointments Management (Booking Service)
   {
     resource: 'appointments',
@@ -327,6 +352,7 @@ const ROLE_PERMISSION_MAPPING = {
       'doctors:manage',
       'specialties:manage',
       'work-locations:manage',
+      'office-hours:manage',
       'schedules:manage',
       'blogs:manage',
       'questions:manage',
@@ -347,6 +373,7 @@ const ROLE_PERMISSION_MAPPING = {
       'specialties:update',
       'work-locations:manage',
       'schedules:manage',
+      'office-hours:manage',
       'blogs:manage',
       'questions:manage',
       'answers:manage',
@@ -369,6 +396,7 @@ const ROLE_PERMISSION_MAPPING = {
       'appointments:read',
       'appointments:update',
       'doctors:read',
+      'office-hours:read',
       'schedules:read',
       'schedules:update',
       'blogs:read',

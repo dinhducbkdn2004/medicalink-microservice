@@ -11,86 +11,86 @@ export function RabbitMQEvent(eventType: string) {
 }
 
 /**
- * Decorator để đánh dấu method là message pattern handler
+ * Mark a method as a RabbitMQ pattern handler
  */
 export function RabbitMQPattern(pattern: string) {
   return SetMetadata(RABBITMQ_PATTERN_METADATA, pattern);
 }
 
 /**
- * Decorator để đánh dấu class sử dụng queue cụ thể
+ * Mark a class as using a specific queue
  */
 export function RabbitMQQueue(queueName: string) {
   return SetMetadata(RABBITMQ_QUEUE_METADATA, queueName);
 }
 
 /**
- * Decorator cho User Events
+ * Mark a method as a User event handler
  */
 export const UserEvent = (eventType: keyof typeof EVENT_TYPES) =>
   RabbitMQEvent(EVENT_TYPES[eventType]);
 
 /**
- * Decorator cho Appointment Events
+ * Mark a method as an Appointment event handler
  */
 export const AppointmentEvent = (eventType: keyof typeof EVENT_TYPES) =>
   RabbitMQEvent(EVENT_TYPES[eventType]);
 
 /**
- * Decorator cho Content Events
+ * Mark a method as a Content event handler
  */
 export const ContentEvent = (eventType: keyof typeof EVENT_TYPES) =>
   RabbitMQEvent(EVENT_TYPES[eventType]);
 
 /**
- * Decorator cho Notification Events
+ * Mark a method as a Notification event handler
  */
 export const NotificationEvent = (eventType: keyof typeof EVENT_TYPES) =>
   RabbitMQEvent(EVENT_TYPES[eventType]);
 
 /**
- * Decorator cho Routing Keys
+ * Mark a method as using a specific routing key
  */
 export const RoutingKey = (key: keyof typeof ROUTING_KEYS) =>
   SetMetadata('rabbitmq:routing-key', ROUTING_KEYS[key]);
 
 /**
- * Decorator để đánh dấu method cần retry logic
+ * Mark a method as needing retry logic
  */
 export function RabbitMQRetry(maxRetries: number = 3, delay: number = 1000) {
   return SetMetadata('rabbitmq:retry', { maxRetries, delay });
 }
 
 /**
- * Decorator để đánh dấu method có timeout
+ * Mark a method as having a timeout
  */
 export function RabbitMQTimeout(timeoutMs: number = 10000) {
   return SetMetadata('rabbitmq:timeout', timeoutMs);
 }
 
 /**
- * Decorator để đánh dấu method cần acknowledgment
+ * Mark a method as needing acknowledgment
  */
 export function RabbitMQAck() {
   return SetMetadata('rabbitmq:ack', true);
 }
 
 /**
- * Decorator để đánh dấu method là dead letter handler
+ * Mark a method as a dead letter handler
  */
 export function RabbitMQDeadLetter() {
   return SetMetadata('rabbitmq:dead-letter', true);
 }
 
 /**
- * Decorator để đánh dấu method cần priority
+ * Mark a method as needing priority
  */
 export function RabbitMQPriority(priority: number) {
   return SetMetadata('rabbitmq:priority', priority);
 }
 
 /**
- * Decorator để đánh dấu method cần correlation ID
+ * Mark a method as needing correlation ID
  */
 export function RabbitMQCorrelationId() {
   return SetMetadata('rabbitmq:correlation-id', true);

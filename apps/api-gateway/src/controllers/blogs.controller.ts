@@ -14,7 +14,6 @@ import {
   Public,
   RequirePermission,
   RequireReadPermission,
-  RequireUpdatePermission,
   RequireDeletePermission,
   CurrentUser,
   type JwtPayloadDto,

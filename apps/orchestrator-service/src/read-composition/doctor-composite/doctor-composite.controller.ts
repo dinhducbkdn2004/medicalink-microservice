@@ -42,16 +42,8 @@ export class DoctorCompositeController {
    */
   @MessagePattern(ORCHESTRATOR_PATTERNS.DOCTOR_SEARCH_COMPOSITE)
   async searchDoctorComposites(@Payload() query: DoctorCompositeQueryDto) {
-    this.logger.log(`Searching doctors with filters:`, query);
-
-    const result =
-      await this.doctorCompositeService.searchDoctorComposites(query);
-
-    this.logger.log(
-      `Found ${result.data.length} doctors (page ${result.meta.page})`,
-    );
-
-    return result;
+    console.log('query', query);
+    return this.doctorCompositeService.searchDoctorComposites(query);
   }
 
   // Admin doctor list composite (uses StaffQueryDto)

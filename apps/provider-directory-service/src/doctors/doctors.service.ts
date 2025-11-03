@@ -11,7 +11,8 @@ import {
 import { NotFoundError } from '@app/domain-errors';
 import { RabbitMQService } from '@app/rabbitmq';
 import { extractPublicIdFromUrl } from '@app/commons/utils';
-import { ORCHESTRATOR_EVENTS } from '@app/contracts/patterns';
+import { ASSETS_PATTERNS } from '@app/contracts/patterns';
+import { DoctorCacheInvalidationService } from '../cache/doctor-cache-invalidation.service';
 
 @Injectable()
 export class DoctorsService {
@@ -20,6 +21,7 @@ export class DoctorsService {
   constructor(
     private readonly doctorRepo: DoctorRepository,
     private readonly rabbitMQService: RabbitMQService,
+    private readonly doctorCacheInvalidation: DoctorCacheInvalidationService,
   ) {}
 
   async create(
@@ -27,26 +29,10 @@ export class DoctorsService {
   ): Promise<DoctorProfileResponseDto> {
     const result = await this.doctorRepo.create(createDoctorDto);
 
-    // Emit doctor profile created event for cache invalidation and asset management
-    try {
-      const assets = this.extractAssetPublicIds(result);
-      this.rabbitMQService.emitEvent(
-        ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_CREATED,
-        {
-          profileId: result.id,
-          staffAccountId: result.staffAccountId,
-          assets,
-        },
-      );
-      this.logger.debug(
-        `Emitted ${ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_CREATED} event for doctor ${result.id} with ${assets.length} assets`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to emit ${ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_CREATED} event: ${error.message}`,
-      );
-      // Don't throw error to avoid breaking the main operation
-    }
+    // Synchronous cache invalidation (targeted + lists)
+    await this.doctorCacheInvalidation.invalidateByStaffAccountId(
+      result.staffAccountId,
+    );
 
     return result;
   }
@@ -111,9 +97,7 @@ export class DoctorsService {
   }
 
   async findOne(id: string): Promise<DoctorProfileResponseDto> {
-    const doctor = await this.doctorRepo.findOne(id, {
-      schedules: { where: { serviceDate: { gte: new Date() } } },
-    });
+    const doctor = await this.doctorRepo.findOne(id);
 
     if (!doctor) {
       throw new NotFoundError(`Doctor profile with id ${id} not found`);
@@ -140,25 +124,19 @@ export class DoctorsService {
     // Extract new asset URLs
     const nextAssets = this.extractAssetPublicIds(result);
 
-    // Emit doctor profile updated event for cache invalidation and asset management
+    // Synchronous cache invalidation (targeted + lists)
+    await this.doctorCacheInvalidation.invalidateByStaffAccountId(
+      result.staffAccountId,
+    );
+
+    // Minimal asset reconcile via content-service
     try {
-      this.rabbitMQService.emitEvent(
-        ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_UPDATED,
-        {
-          profileId: result.id,
-          staffAccountId: result.staffAccountId,
-          prevAssets,
-          nextAssets,
-        },
+      await this.rabbitMQService.sendMessage<void>(
+        ASSETS_PATTERNS.RECONCILE_ENTITY,
+        { prevPublicIds: prevAssets, nextPublicIds: nextAssets },
       );
-      this.logger.log(
-        `Emitted ${ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_UPDATED} event for doctor ${result.id} (prev: ${prevAssets.length}, next: ${nextAssets.length} assets)`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to emit ${ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_UPDATED} event for doctor ${result.id}:`,
-        error,
-      );
+    } catch (_) {
+      // skip errors to avoid impacting main flow
     }
 
     return result;
@@ -194,23 +172,19 @@ export class DoctorsService {
 
     const result = await this.doctorRepo.remove(id);
 
-    // Emit doctor profile deleted event for asset cleanup
+    // Synchronous cache invalidation (targeted + lists)
+    await this.doctorCacheInvalidation.invalidateByStaffAccountId(
+      existing.staffAccountId,
+    );
+
+    // Minimal orphan cleanup via content-service
     try {
-      this.rabbitMQService.emitEvent(
-        ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_DELETED,
-        {
-          profileId: id,
-          assetPublicIds,
-        },
-      );
-      this.logger.log(
-        `Emitted ${ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_DELETED} event for doctor ${id} with ${assetPublicIds.length} assets for cleanup`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to emit ${ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_DELETED} event for doctor ${id}:`,
-        error,
-      );
+      await this.rabbitMQService.sendMessage<{
+        deletedDb: number;
+        requested: number;
+      }>(ASSETS_PATTERNS.CLEANUP_ORPHANED, { publicIds: assetPublicIds });
+    } catch (_) {
+      // skip
     }
 
     return result;
@@ -226,24 +200,10 @@ export class DoctorsService {
       throw new NotFoundError(`Doctor profile with id ${id} not found`);
     }
 
-    // Emit doctor profile updated event for cache invalidation and asset management
-    try {
-      this.rabbitMQService.emitEvent(
-        ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_UPDATED,
-        {
-          profileId: doctor.id,
-          staffAccountId: doctor.staffAccountId,
-        },
-      );
-      this.logger.log(
-        `Emitted ${ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_UPDATED} event for doctor ${doctor.id}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to emit ${ORCHESTRATOR_EVENTS.DOCTOR_PROFILE_UPDATED} event for doctor ${doctor.id}:`,
-        error,
-      );
-    }
+    // Synchronous cache invalidation (targeted + lists)
+    await this.doctorCacheInvalidation.invalidateByStaffAccountId(
+      doctor.staffAccountId,
+    );
 
     return doctor;
   }

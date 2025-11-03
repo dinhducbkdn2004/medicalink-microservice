@@ -23,6 +23,10 @@ import {
   UpdatePermissionGroupDto,
 } from '@app/contracts';
 import { MicroserviceService } from '../utils/microservice.service';
+import {
+  PERMISSION_GROUP_PATTERNS,
+  PERMISSION_PATTERNS,
+} from '@app/contracts/patterns/permission.patterns';
 
 @Controller('permissions')
 export class PermissionsController {
@@ -37,7 +41,7 @@ export class PermissionsController {
   async getAllPermissions() {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.getAll',
+      PERMISSION_PATTERNS.GET_ALL_PERMISSIONS,
       {},
     );
   }
@@ -51,7 +55,7 @@ export class PermissionsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.getUserPermissions',
+      PERMISSION_PATTERNS.GET_USER_PERMISSIONS,
       { userId, tenantId },
     );
   }
@@ -61,7 +65,7 @@ export class PermissionsController {
   async getMyPermissions(@CurrentUser() user: JwtPayloadDto) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.getUserPermissions',
+      PERMISSION_PATTERNS.GET_USER_PERMISSIONS,
       { userId: user.sub, tenantId: user.tenant },
     );
   }
@@ -72,7 +76,7 @@ export class PermissionsController {
   async assignUserPermission(@Body() dto: AssignUserPermissionDto) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.assignUserPermission',
+      PERMISSION_PATTERNS.ASSIGN_USER_PERMISSION,
       dto,
     );
   }
@@ -83,7 +87,7 @@ export class PermissionsController {
   async revokeUserPermission(@Body() dto: RevokeUserPermissionDto) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.revokeUserPermission',
+      PERMISSION_PATTERNS.REVOKE_USER_PERMISSION,
       dto,
     );
   }
@@ -103,7 +107,7 @@ export class PermissionsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.hasPermission',
+      PERMISSION_PATTERNS.HAS_PERMISSION,
       payload,
     );
   }
@@ -114,7 +118,7 @@ export class PermissionsController {
   async getPermissionStats() {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.getStats',
+      PERMISSION_PATTERNS.GET_PERMISSION_STATS,
       {},
     );
   }
@@ -128,7 +132,7 @@ export class PermissionsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.refreshUserSnapshot',
+      PERMISSION_PATTERNS.REFRESH_USER_PERMISSION_SNAPSHOT,
       { userId, tenantId },
     );
   }
@@ -139,7 +143,7 @@ export class PermissionsController {
   async invalidateUserPermissionCache(@Param('userId') userId: string) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.invalidateUserCache',
+      PERMISSION_PATTERNS.INVALIDATE_USER_PERMISSION_CACHE,
       { userId },
     );
   }
@@ -150,7 +154,7 @@ export class PermissionsController {
   async getAllGroups(@Query('tenantId') tenantId?: string) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.getAllGroups',
+      PERMISSION_GROUP_PATTERNS.GET_ALL,
       { tenantId },
     );
   }
@@ -160,7 +164,7 @@ export class PermissionsController {
   async createGroup(@Body() dto: CreatePermissionGroupDto) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.createGroup',
+      PERMISSION_GROUP_PATTERNS.CREATE,
       dto,
     );
   }
@@ -173,7 +177,7 @@ export class PermissionsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.updateGroup',
+      PERMISSION_GROUP_PATTERNS.UPDATE,
       {
         ...dto,
         id: groupId,
@@ -187,7 +191,7 @@ export class PermissionsController {
   async deleteGroup(@Param('groupId') groupId: string) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.deleteGroup',
+      PERMISSION_GROUP_PATTERNS.DELETE,
       { groupId },
     );
   }
@@ -201,7 +205,7 @@ export class PermissionsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.getUserGroups',
+      PERMISSION_GROUP_PATTERNS.GET_USER_GROUPS,
       { userId, tenantId },
     );
   }
@@ -214,7 +218,7 @@ export class PermissionsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.addUserToGroup',
+      PERMISSION_GROUP_PATTERNS.ADD_USER_TO_GROUP,
       { ...dto, userId },
     );
   }
@@ -228,7 +232,7 @@ export class PermissionsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.removeUserFromGroup',
+      PERMISSION_GROUP_PATTERNS.REMOVE_USER_FROM_GROUP,
       { userId, groupId, tenantId },
     );
   }
@@ -242,7 +246,7 @@ export class PermissionsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.getGroupPermissions',
+      PERMISSION_GROUP_PATTERNS.GET_GROUP_PERMISSIONS,
       { groupId, tenantId },
     );
   }
@@ -255,7 +259,7 @@ export class PermissionsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.assignGroupPermission',
+      PERMISSION_GROUP_PATTERNS.ASSIGN_GROUP_PERMISSION,
       { ...dto, groupId },
     );
   }
@@ -268,7 +272,7 @@ export class PermissionsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
-      'permissions.revokeGroupPermission',
+      PERMISSION_GROUP_PATTERNS.REVOKE_GROUP_PERMISSION,
       { ...dto, groupId },
     );
   }

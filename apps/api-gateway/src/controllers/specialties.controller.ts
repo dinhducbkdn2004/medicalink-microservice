@@ -24,6 +24,8 @@ import {
   RequireUpdatePermission,
   RequireDeletePermission,
   RequirePermission,
+  SPECIALTIES_PATTERNS,
+  SPECIALTY_INFO_SECTIONS_PATTERNS,
 } from '@app/contracts';
 import { MicroserviceService } from '../utils/microservice.service';
 @Controller('specialties')
@@ -46,7 +48,7 @@ export class SpecialtiesController {
 
     return this.microserviceService.sendWithTimeout(
       this.providerDirectoryClient,
-      'specialties.findAllPublic',
+      SPECIALTIES_PATTERNS.FIND_ALL_PUBLIC,
       publicQuery,
     );
   }
@@ -56,7 +58,7 @@ export class SpecialtiesController {
   findAll(@Query() query: SpecialtyQueryDto) {
     return this.microserviceService.sendWithTimeout(
       this.providerDirectoryClient,
-      'specialties.findAllAdmin',
+      SPECIALTIES_PATTERNS.FIND_ALL_ADMIN,
       query,
     );
   }
@@ -70,7 +72,7 @@ export class SpecialtiesController {
     return this.microserviceService.sendWithTimeout<{
       total: number;
       recentlyCreated: number;
-    }>(this.providerDirectoryClient, 'specialties.stats', {});
+    }>(this.providerDirectoryClient, SPECIALTIES_PATTERNS.GET_STATS, {});
   }
 
   @Public()
@@ -80,7 +82,7 @@ export class SpecialtiesController {
   ): Promise<SpecialtyWithInfoSectionsResponseDto> {
     return this.microserviceService.sendWithTimeout<SpecialtyWithInfoSectionsResponseDto>(
       this.providerDirectoryClient,
-      'specialties.findBySlug',
+      SPECIALTIES_PATTERNS.FIND_BY_SLUG,
       slug,
     );
   }
@@ -90,7 +92,7 @@ export class SpecialtiesController {
   findOne(@Param('id') id: string): Promise<SpecialtyResponseDto> {
     return this.microserviceService.sendWithTimeout<SpecialtyResponseDto>(
       this.providerDirectoryClient,
-      'specialties.findOne',
+      SPECIALTIES_PATTERNS.FIND_ONE,
       id,
     );
   }
@@ -104,7 +106,7 @@ export class SpecialtiesController {
       SpecialtyInfoSectionResponseDto[]
     >(
       this.providerDirectoryClient,
-      'specialties.findInfoSectionsBySpecialtyId',
+      SPECIALTY_INFO_SECTIONS_PATTERNS.GET_BY_SPECIALTY_ID,
       specialtyId,
     );
   }
@@ -116,7 +118,7 @@ export class SpecialtiesController {
   ): Promise<SpecialtyInfoSectionResponseDto> {
     return this.microserviceService.sendWithTimeout<SpecialtyInfoSectionResponseDto>(
       this.providerDirectoryClient,
-      'specialties.createInfoSection',
+      SPECIALTY_INFO_SECTIONS_PATTERNS.CREATE,
       createInfoSectionDto,
     );
   }
@@ -129,7 +131,7 @@ export class SpecialtiesController {
   ): Promise<SpecialtyInfoSectionResponseDto> {
     return this.microserviceService.sendWithTimeout<SpecialtyInfoSectionResponseDto>(
       this.providerDirectoryClient,
-      'specialties.updateInfoSection',
+      SPECIALTY_INFO_SECTIONS_PATTERNS.UPDATE,
       {
         id,
         data: updateInfoSectionDto,
@@ -144,7 +146,7 @@ export class SpecialtiesController {
   ): Promise<SpecialtyInfoSectionResponseDto> {
     return this.microserviceService.sendWithTimeout<SpecialtyInfoSectionResponseDto>(
       this.providerDirectoryClient,
-      'specialties.deleteInfoSection',
+      SPECIALTY_INFO_SECTIONS_PATTERNS.REMOVE,
       id,
     );
   }
@@ -156,7 +158,7 @@ export class SpecialtiesController {
   ): Promise<SpecialtyResponseDto> {
     return this.microserviceService.sendWithTimeout<SpecialtyResponseDto>(
       this.providerDirectoryClient,
-      'specialties.create',
+      SPECIALTIES_PATTERNS.CREATE,
       createSpecialtyDto,
     );
   }
@@ -170,7 +172,7 @@ export class SpecialtiesController {
   ): Promise<SpecialtyResponseDto> {
     return this.microserviceService.sendWithTimeout<SpecialtyResponseDto>(
       this.providerDirectoryClient,
-      'specialties.update',
+      SPECIALTIES_PATTERNS.UPDATE,
       {
         id,
         data: updateSpecialtyDto,
@@ -184,7 +186,7 @@ export class SpecialtiesController {
   remove(@Param('id') id: string): Promise<SpecialtyResponseDto> {
     return this.microserviceService.sendWithTimeout<SpecialtyResponseDto>(
       this.providerDirectoryClient,
-      'specialties.remove',
+      SPECIALTIES_PATTERNS.REMOVE,
       id,
     );
   }

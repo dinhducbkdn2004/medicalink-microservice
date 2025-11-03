@@ -72,8 +72,8 @@ export interface DoctorCompositeData {
   }[];
 
   // Timestamps
-  accountCreatedAt: Date;
-  accountUpdatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
   profileCreatedAt: Date;
   profileUpdatedAt: Date;
 }

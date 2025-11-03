@@ -51,6 +51,7 @@ model WorkLocation {
 
   doctorWorkLocations DoctorWorkLocation[]
   schedules           Schedule[]
+  officeHours         OfficeHours[]
 
   @@index([name], map: "idx_work_locations_name")
   @@map("work_locations")
@@ -72,10 +73,12 @@ model Doctor {
   portrait        String?  @db.VarChar
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  appointmentDuration Int      @map("appointment_duration") @default(30)
 
   doctorSpecialties   DoctorSpecialty[]
   doctorWorkLocations DoctorWorkLocation[]
   schedules           Schedule[]
+  officeHours         OfficeHours[]
 
   @@map("doctors")
 }
@@ -127,4 +130,23 @@ model Schedule {
   @@index([doctorId, serviceDate], map: "idx_schedules_doctor_date")
   @@index([locationId, serviceDate], map: "idx_schedules_location_date")
   @@map("schedules")
+}
+
+model OfficeHours {
+  id             String      @id @default(cuid())
+  doctorId       String?     @map("doctor_id") @db.VarChar(27)
+  workLocationId String?     @map("work_location_id") @db.VarChar(27)
+  dayOfWeek      Int         @map("day_of_week") @db.SmallInt
+  startTime      DateTime    @map("start_time") @db.Time(6)
+  endTime        DateTime    @map("end_time")   @db.Time(6)
+  isGlobal       Boolean     @map("is_global") @default(false)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  doctor         Doctor?     @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  workLocation   WorkLocation? @relation(fields: [workLocationId], references: [id], onDelete: SetNull)
+
+  @@index([workLocationId, dayOfWeek], map: "idx_office_hours_location_day")
+  @@index([doctorId, workLocationId, dayOfWeek], map: "idx_office_hours_doctor_location_day")
+  @@map("office_hours")
 }

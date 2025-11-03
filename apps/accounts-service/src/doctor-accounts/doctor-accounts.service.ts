@@ -97,6 +97,22 @@ export class DoctorAccountsService {
       );
     }
 
+    // Emit staff account created event for cache invalidation
+    try {
+      this.rabbitMQService.emitEvent(
+        ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_CREATED,
+        {
+          id: doctor.id,
+          role: doctor.role,
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit ${ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_CREATED} event for doctor ${doctor.id}:`,
+        error,
+      );
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...result } = doctor;
     return result;
@@ -158,6 +174,22 @@ export class DoctorAccountsService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...result } =
       await this.staffRepository.softDelete(id);
+
+    // Emit staff account deleted event for cache invalidation
+    try {
+      this.rabbitMQService.emitEvent(
+        ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_DELETED,
+        {
+          id,
+          role: existingDoctor.role,
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit ${ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_DELETED} event for doctor ${id}:`,
+        error,
+      );
+    }
     return result;
   }
 

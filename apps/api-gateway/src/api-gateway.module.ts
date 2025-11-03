@@ -39,6 +39,8 @@ import {
   BlogsController,
   QuestionsController,
   ReviewsController,
+  AppointmentsController,
+  OfficeHoursController,
 } from './controllers';
 import { HealthController } from './health/health.controller';
 
@@ -75,6 +77,8 @@ import { HealthController } from './health/health.controller';
     ReviewsController,
     PatientsController,
     HealthController,
+    AppointmentsController,
+    OfficeHoursController,
   ],
   providers: [
     HealthService,

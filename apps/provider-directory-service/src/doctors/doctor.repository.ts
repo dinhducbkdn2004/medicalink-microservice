@@ -6,6 +6,7 @@ import {
   DoctorProfileResponseDto,
 } from '@app/contracts';
 import { BadRequestError, ConflictError } from '@app/domain-errors';
+import { Specialty, WorkLocation } from '../../prisma/generated/client';
 
 @Injectable()
 export class DoctorRepository {
@@ -18,9 +19,21 @@ export class DoctorRepository {
     return {
       ...doctor,
       specialties:
-        doctor.doctorSpecialties?.map((ds: any) => ds.specialty) ?? [],
+        doctor.doctorSpecialties?.map((ds: { specialty: Specialty }) => {
+          return {
+            id: ds.specialty.id,
+            name: ds.specialty.name,
+            slug: ds.specialty.slug,
+          };
+        }) ?? [],
       workLocations:
-        doctor.doctorWorkLocations?.map((dwl: any) => dwl.location) ?? [],
+        doctor.doctorWorkLocations?.map((dwl: { location: WorkLocation }) => {
+          return {
+            id: dwl.location.id,
+            name: dwl.location.name,
+            address: dwl.location.address,
+          };
+        }) ?? [],
       doctorSpecialties: undefined,
       doctorWorkLocations: undefined,
     } as DoctorProfileResponseDto;

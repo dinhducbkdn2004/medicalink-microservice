@@ -18,21 +18,24 @@ enum AppointmentStatus {
   COMPLETED
 }
 
+enum EventType {
+  APPOINTMENT
+}
+
 model Patient {
-  id           String         @id @default(cuid()) @db.VarChar(27)
-  fullName     String         @map("full_name") @db.VarChar(120)
-  email        String?        @unique @db.VarChar(255)
-  phone        String?        @db.VarChar(32)
-  isMale       Boolean?       @map("is_male")
-  dateOfBirth  DateTime?      @map("date_of_birth") @db.Date
-  addressLine  String?        @map("address_line") @db.VarChar(255)
-  district     String?        @db.VarChar(100)
-  province     String?        @db.VarChar(100)
-  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt    DateTime?      @map("deleted_at") @db.Timestamptz(6)
-  Appointment  Appointment[]
-  ScheduleHold ScheduleHold[]
+  id          String        @id @default(cuid()) @db.VarChar(27)
+  fullName    String        @map("full_name") @db.VarChar(120)
+  email       String?       @unique @db.VarChar(255)
+  phone       String?       @db.VarChar(32)
+  isMale      Boolean?      @map("is_male")
+  dateOfBirth DateTime?     @map("date_of_birth") @db.Date
+  addressLine String?       @map("address_line") @db.VarChar(255)
+  district    String?       @db.VarChar(100)
+  province    String?       @db.VarChar(100)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  Appointment Appointment[]
 
   // Relations
   @@index([fullName], map: "idx_patients_full_name")
@@ -44,11 +47,9 @@ model Appointment {
   id          String            @id @default(cuid())
   patientId   String            @map("patient_id") @db.VarChar(27)
   doctorId    String            @map("doctor_id") @db.VarChar(27)
-  scheduleId  String            @map("schedule_id") @db.VarChar(27)
   locationId  String            @map("location_id") @db.VarChar(27)
-  serviceDate DateTime          @map("service_date") @db.Date
-  timeStart   DateTime          @map("time_start") @db.Time(6)
-  timeEnd     DateTime          @map("time_end") @db.Time(6)
+  eventId     String            @map("event_id") @db.VarChar(27)
+  specialtyId String            @map("specialty_id") @db.VarChar(27)
   status      AppointmentStatus @default(BOOKED)
   reason      String?           @db.VarChar(255)
   notes       String?           @db.Text
@@ -59,42 +60,29 @@ model Appointment {
   cancelledAt DateTime?         @map("cancelled_at") @db.Timestamptz(6)
   completedAt DateTime?         @map("completed_at") @db.Timestamptz(6)
 
-  patient           Patient            @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  appointmentEvents AppointmentEvent[]
+  // Relation
+  patient     Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  event       Event             @relation(fields: [eventId], references: [id], onDelete: Restrict)
 
-  @@unique([scheduleId, patientId])
-  @@index([patientId, serviceDate], map: "idx_appointments_patient_date")
-  @@index([doctorId, serviceDate], map: "idx_appointments_doctor_date")
-  @@index([status, serviceDate], map: "idx_appointments_status_date")
-  @@index([serviceDate, timeStart], map: "idx_appointments_date_time")
+  @@index([doctorId, locationId, specialtyId], map: "idx_appointments_doctor_location_specialty")
   @@map("appointments")
 }
 
-model AppointmentEvent {
-  id            String   @id @default(cuid())
-  appointmentId String   @map("appointment_id") @db.VarChar(27)
-  eventType     String   @map("event_type") @db.VarChar(40)
-  occurredAt    DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
-  metadata      Json?
+model Event {
+  id          String        @id @default(cuid())
+  eventType   EventType     @default(APPOINTMENT) @map("event_type")
+  isTempHold  Boolean       @default(false) @map("is_temp_hold")
+  expiresAt   DateTime?     @map("expires_at") @db.Timestamptz(6)
+  nonBlocking Boolean       @default(false) @map("non_blocking")
+  doctorId    String?       @map("doctor_id") @db.VarChar(27)
+  locationId  String?       @map("location_id") @db.VarChar(27)
+  serviceDate DateTime?     @map("service_date") @db.Date
+  timeStart   DateTime?     @map("time_start") @db.Time(6)
+  timeEnd     DateTime?     @map("time_end") @db.Time(6)
+  occurredAt  DateTime      @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  metadata    Json?
+  Appointment Appointment[]
 
-  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-
-  @@index([appointmentId, occurredAt], map: "idx_appointment_events_appt_time")
-  @@map("appointment_events") 
-}
-
-model ScheduleHold {
-  id         String   @id @default(cuid())
-  scheduleId String   @map("schedule_id") @db.VarChar(27)
-  patientId  String   @map("patient_id") @db.VarChar(27)
-  expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
-  status     String   @default("HELD") @db.VarChar(16)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  @@index([scheduleId], map: "idx_schedule_holds_schedule")
-  @@index([patientId], map: "idx_schedule_holds_patient")
-  @@index([expiresAt], map: "idx_schedule_holds_expires")
-  @@map("schedule_holds")
+  @@index([doctorId, locationId, serviceDate, timeStart, timeEnd], map: "idx_events_slot")
+  @@map("events")
 }

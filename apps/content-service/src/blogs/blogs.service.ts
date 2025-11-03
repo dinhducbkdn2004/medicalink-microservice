@@ -148,21 +148,6 @@ export class BlogsService {
 
     const result = await this.blogRepository.updateBlog(id, data);
 
-    // Emit blog updated event for cache invalidation
-    try {
-      this.rabbitMQService.emitEvent(ORCHESTRATOR_EVENTS.BLOG_UPDATED, {
-        blogId: result.id,
-      });
-      this.logger.debug(
-        `Emitted ${ORCHESTRATOR_EVENTS.BLOG_UPDATED} event for blog ${result.id}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to emit ${ORCHESTRATOR_EVENTS.BLOG_UPDATED} event: ${error.message}`,
-      );
-      // Don't throw error to avoid breaking the main operation
-    }
-
     return result;
   }
 

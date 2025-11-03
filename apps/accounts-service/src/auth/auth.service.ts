@@ -60,17 +60,26 @@ export class AuthService {
       }),
     });
 
-    const refreshToken = await this.jwtService.signAsync(payload, {
-      secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET', {
-        infer: true,
-      }),
-      expiresIn: +this.configService.getOrThrow<number>(
-        'JWT_REFRESH_EXPIRES_IN',
-        {
+    // Use minimal payload for refresh token to reduce exposure
+    const minimalRefreshPayload = {
+      sub: staff.id,
+      ver: authVersion,
+    } as const;
+
+    const refreshToken = await this.jwtService.signAsync(
+      minimalRefreshPayload,
+      {
+        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET', {
           infer: true,
-        },
-      ),
-    });
+        }),
+        expiresIn: +this.configService.getOrThrow<number>(
+          'JWT_REFRESH_EXPIRES_IN',
+          {
+            infer: true,
+          },
+        ),
+      },
+    );
 
     return {
       access_token: accessToken,

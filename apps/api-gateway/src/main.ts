@@ -28,12 +28,12 @@ async function bootstrap() {
       exceptionFactory: (errors) => {
         const result = errors.map((error) => ({
           property: error.property,
-          value: error.value,
-          constraints: error.constraints,
+          message:
+            error.constraints?.[Object.keys(error.constraints)[0]] ||
+            'Validation failed',
         }));
         return new BadRequestException({
-          message: 'Validation failed',
-          error: 'Bad Request',
+          message: result.map((error) => error.message).join('; '),
           statusCode: 400,
           details: result,
         });

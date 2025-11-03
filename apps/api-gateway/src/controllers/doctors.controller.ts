@@ -21,6 +21,9 @@ import {
   RequireDeletePermission,
   CurrentUser,
   RequireCreatePermission,
+  DoctorSearchCompositeQueryDto,
+  ORCHESTRATOR_PATTERNS,
+  DOCTOR_ACCOUNTS_PATTERNS,
 } from '@app/contracts';
 import type { JwtPayloadDto } from '@app/contracts';
 import { MicroserviceService } from '../utils/microservice.service';
@@ -43,7 +46,7 @@ export class DoctorsController {
     // Use orchestrator to get admin composite list (full metadata)
     const result: any = await this.microserviceService.sendWithTimeout(
       this.orchestratorClient,
-      'orchestrator.doctor.listComposite',
+      ORCHESTRATOR_PATTERNS.DOCTOR_LIST_COMPOSITE,
       query,
       {
         timeoutMs: 20000,
@@ -61,7 +64,7 @@ export class DoctorsController {
   async getStats(): Promise<StaffStatsDto> {
     return this.microserviceService.sendWithTimeout<StaffStatsDto>(
       this.accountsClient,
-      'doctor-accounts.stats',
+      DOCTOR_ACCOUNTS_PATTERNS.STATS,
       {},
     );
   }
@@ -73,13 +76,13 @@ export class DoctorsController {
   @RequireReadPermission('doctors')
   @Get('search/complete')
   async searchDoctorsComplete(
-    @Query() query: any,
+    @Query() query: DoctorSearchCompositeQueryDto,
     @CurrentUser() _user?: JwtPayloadDto,
   ) {
     // Use orchestrator to get composite list with profileId, isActive, and avatarUrl
     return this.microserviceService.sendWithTimeout(
       this.orchestratorClient,
-      'orchestrator.doctor.searchComposite',
+      ORCHESTRATOR_PATTERNS.DOCTOR_SEARCH_COMPOSITE,
       query,
       {
         timeoutMs: 20000,
@@ -95,7 +98,7 @@ export class DoctorsController {
   ): Promise<IStaffAccount> {
     return this.microserviceService.sendWithTimeout<IStaffAccount>(
       this.accountsClient,
-      'doctor-accounts.findOne',
+      DOCTOR_ACCOUNTS_PATTERNS.FIND_ONE,
       id,
     );
   }
@@ -113,7 +116,7 @@ export class DoctorsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.orchestratorClient,
-      'orchestrator.doctor.getComposite',
+      ORCHESTRATOR_PATTERNS.DOCTOR_GET_COMPOSITE,
       { staffAccountId: id, skipCache: skipCache === true },
       { timeoutMs: 15000 },
     );
@@ -131,7 +134,7 @@ export class DoctorsController {
   ) {
     return this.microserviceService.sendWithTimeout(
       this.orchestratorClient,
-      'orchestrator.doctor.create',
+      ORCHESTRATOR_PATTERNS.DOCTOR_CREATE,
       {
         ...createDoctorDto,
         userId: user.sub,
@@ -150,7 +153,7 @@ export class DoctorsController {
   ): Promise<IStaffAccount> {
     return this.microserviceService.sendWithTimeout<IStaffAccount>(
       this.accountsClient,
-      'doctor-accounts.update',
+      DOCTOR_ACCOUNTS_PATTERNS.UPDATE,
       {
         id,
         data: updateDoctorDto,
@@ -164,7 +167,7 @@ export class DoctorsController {
   async remove(@Param('id') id: string): Promise<IStaffAccount> {
     return this.microserviceService.sendWithTimeout<IStaffAccount>(
       this.accountsClient,
-      'doctor-accounts.remove',
+      DOCTOR_ACCOUNTS_PATTERNS.REMOVE,
       id,
       { timeoutMs: 12000 },
     );

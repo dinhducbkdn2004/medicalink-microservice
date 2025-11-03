@@ -6,6 +6,7 @@ import {
   PatientFilterOptions,
 } from '@app/contracts';
 import { PrismaService } from '../../prisma/prisma.service';
+import { normalizeDateInputToUtcDate } from '@app/commons/utils';
 
 export type Patient = any;
 
@@ -38,9 +39,9 @@ export class PatientRepository extends BaseRepository<
     return await this.model.findMany({
       where: {
         OR: [
-          { firstName: { contains: query, mode: 'insensitive' } },
-          { lastName: { contains: query, mode: 'insensitive' } },
+          { fullName: { contains: query, mode: 'insensitive' } },
           { email: { contains: query, mode: 'insensitive' } },
+          { phone: { contains: query, mode: 'insensitive' } },
         ],
       },
       orderBy: { createdAt: 'desc' },
@@ -70,9 +71,34 @@ export class PatientRepository extends BaseRepository<
   }
 
   async create(data: CreatePatientDto): Promise<Patient> {
+    const dateOfBirth = normalizeDateInputToUtcDate((data as any).dateOfBirth);
     return await this.model.create({
       data: {
-        ...data,
+        fullName: data.fullName,
+        email: data.email ?? null,
+        phone: data.phone ?? null,
+        isMale: data.isMale ?? null,
+        dateOfBirth: dateOfBirth ?? null,
+        addressLine: data.addressLine ?? null,
+        district: data.district ?? null,
+        province: data.province ?? null,
+      },
+    });
+  }
+
+  async update(id: string, data: UpdatePatientDto): Promise<Patient> {
+    const dateOfBirth = normalizeDateInputToUtcDate((data as any).dateOfBirth);
+    return await this.model.update({
+      where: { id },
+      data: {
+        fullName: (data as any).fullName,
+        email: (data as any).email,
+        phone: (data as any).phone,
+        isMale: (data as any).isMale,
+        dateOfBirth: dateOfBirth,
+        addressLine: (data as any).addressLine,
+        district: (data as any).district,
+        province: (data as any).province,
       },
     });
   }

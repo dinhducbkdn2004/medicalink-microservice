@@ -3,7 +3,6 @@ import {
   IsNotEmpty,
   MaxLength,
   IsOptional,
-  IsArray,
   IsEmail,
 } from 'class-validator';
 import { IsCuid } from '@app/contracts/decorators';
