@@ -30,9 +30,9 @@ export class MicroserviceService {
           .pipe(timeout(timeoutMs), defaultIfEmpty(null as T)),
       );
     } catch (error) {
-      this.logger.warn(
-        `Error thrown from ${serviceName}: ${error?.message || error.name}`,
-      );
+      const msg = error?.message || error?.name || JSON.stringify(error);
+      this.logger.error(`Error sending message to ${serviceName}: ${msg}`);
+      this.logger.debug(error);
       throw error;
     }
   }

@@ -46,7 +46,6 @@ export function toRpcException(e: unknown): RpcException {
         executedSteps: sagaError.executedSteps,
         compensatedSteps: sagaError.compensatedSteps,
         durationMs: sagaError.durationMs,
-        ...(originalError && { originalError }),
       },
     };
   } else if (e instanceof HttpException) {
@@ -93,6 +92,13 @@ export function toRpcException(e: unknown): RpcException {
     const statusCode = e.statusCode ?? 400;
     const name = e.name;
     p = payload(statusCode, name, e.message, e.details);
+  } else if (typeof (e as any).error === 'object') {
+    const wrappedError = e as any;
+    p = payload(
+      wrappedError.error.statusCode,
+      wrappedError.error.name,
+      wrappedError.error.message,
+    );
   } else {
     const msg = e instanceof Error ? e.message : 'Internal server error';
     const details = (e as any)?.details;
@@ -128,6 +134,7 @@ function safeDetails(x: unknown): unknown {
 
 function safeMessage(m: unknown): string {
   if (typeof m === 'string') return m;
+  if (Array.isArray(m)) return m.join('; ');
   try {
     return JSON.stringify(m);
   } catch {

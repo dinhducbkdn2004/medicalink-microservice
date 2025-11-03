@@ -11,10 +11,6 @@ import {
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
-  CreateDoctorProfileDto,
-  UpdateDoctorProfileDto,
-  DoctorProfileQueryDto,
-  ToggleDoctorActiveBodyDto,
   Public,
   RequireDeletePermission,
   RequireReadPermission,
@@ -22,9 +18,19 @@ import {
   RequirePermission,
   CurrentUser,
 } from '@app/contracts';
-import type { JwtPayloadDto } from '@app/contracts';
+import type {
+  CreateDoctorProfileDto,
+  UpdateDoctorProfileDto,
+  DoctorProfileQueryDto,
+  ToggleDoctorActiveBodyDto,
+  JwtPayloadDto,
+  ScheduleSlotsPublicQueryDto,
+} from '@app/contracts/dtos';
 import { MicroserviceService } from '../utils/microservice.service';
-import { DOCTOR_PROFILES_PATTERNS } from '@app/contracts/patterns';
+import {
+  DOCTOR_PROFILES_PATTERNS,
+  ORCHESTRATOR_PATTERNS,
+} from '@app/contracts/patterns';
 
 @Controller('doctors/profile')
 export class DoctorProfileController {
@@ -41,16 +47,10 @@ export class DoctorProfileController {
   async findAll(@Query() query: DoctorProfileQueryDto) {
     const result: any = await this.microserviceService.sendWithTimeout(
       this.orchestratorClient,
-      'orchestrator.doctor.searchComposite',
+      ORCHESTRATOR_PATTERNS.DOCTOR_SEARCH_COMPOSITE,
       {
-        page: query.page,
-        limit: query.limit,
-        search: query.search,
-        sortBy: query.sortBy,
-        sortOrder: query.sortOrder,
-        specialtyIds: query.specialtyIds,
-        workLocationIds: query.workLocationIds,
-        isActive: true, // Always filter by active doctors for public endpoint
+        ...query,
+        isActive: true,
         skipCache: false,
       },
       { timeoutMs: 15000 },
@@ -65,7 +65,6 @@ export class DoctorProfileController {
     };
   }
 
-  // Get self profile using account id from JWT
   @RequirePermission('doctors', 'read', { isSelf: true })
   @Get('me')
   getMyProfile(@CurrentUser() user: JwtPayloadDto) {
@@ -122,6 +121,23 @@ export class DoctorProfileController {
       this.providerDirectoryClient,
       DOCTOR_PROFILES_PATTERNS.UPDATE,
       { id, ...updateDto },
+      { timeoutMs: 12000 },
+    );
+  }
+
+  @Public()
+  @Get(':id/slots')
+  async getPublicSlots(
+    @Param('id') id: string,
+    @Query() query: ScheduleSlotsPublicQueryDto,
+  ) {
+    return await this.microserviceService.sendWithTimeout(
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.SCHEDULE_SLOTS_LIST,
+      {
+        doctorId: id,
+        ...query,
+      },
       { timeoutMs: 12000 },
     );
   }

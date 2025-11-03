@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsArray, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  MaxLength,
+  IsNumber,
+  Min,
+} from 'class-validator';
 
 export class UpdateDoctorProfileDto {
   @IsString({ message: 'Doctor ID must be a string' })
@@ -59,4 +66,9 @@ export class UpdateDoctorProfileDto {
   @IsString({ each: true, message: 'Each location ID must be a string' })
   @IsOptional()
   locationIds?: string[];
+
+  @IsOptional()
+  @IsNumber({}, { message: 'appointmentDuration must be a number' })
+  @Min(1, { message: 'appointmentDuration must be at least 1 minute' })
+  appointmentDuration?: number;
 }

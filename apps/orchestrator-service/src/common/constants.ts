@@ -10,6 +10,7 @@ export const CACHE_PREFIXES = {
   PATIENT_COMPOSITE: 'patient:composite',
   BLOG_COMPOSITE: 'blog:composite:',
   BLOG_COMPOSITE_LIST: 'blog:composite:list:',
+  SCHEDULE_SLOTS_LIST: 'scheduleSlots:list:',
 } as const;
 
 /**

@@ -24,3 +24,7 @@ export * from './work-location-paginated-response.dto';
 export * from './work-location-public-query.dto';
 export * from './work-location-query.dto';
 export * from './work-location-response.dto';
+export * from './create-office-hours.dto';
+export * from './update-office-hours.dto';
+export * from './office-hours-query.dto';
+export * from './office-hours-response.dto';

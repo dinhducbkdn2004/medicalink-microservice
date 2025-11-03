@@ -2,7 +2,6 @@ export interface AppointmentDto {
   id: string;
   patientId: string;
   doctorId: string;
-  scheduleId: string;
   locationId: string;
   serviceDate: Date;
   timeStart: string;

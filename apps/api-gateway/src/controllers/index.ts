@@ -10,3 +10,5 @@ export * from './work-locations.controller';
 export * from './blogs.controller';
 export * from './questions.controller';
 export * from './reviews.controller';
+export * from './appointments.controller';
+export * from './office-hours.controller';

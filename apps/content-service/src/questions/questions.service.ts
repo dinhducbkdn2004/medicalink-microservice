@@ -4,14 +4,12 @@ import {
   CreateQuestionDto,
   UpdateQuestionDto,
   QuestionResponseDto,
-  CreateAnswerDto,
   AnswerResponseDto,
   UpdateAnswerDto,
   GetQuestionsQueryDto,
 } from '@app/contracts/dtos/content';
 import { AssetsMaintenanceService } from '../assets/assets-maintenance.service';
 import { NotFoundError } from '@app/domain-errors';
-import { QuestionStatus } from 'apps/content-service/prisma/generated/client';
 import { SCreateAnswerDto } from './dtos/s-create-answer-dto';
 
 @Injectable()
@@ -62,7 +60,6 @@ export class QuestionsService {
     id: string,
     updateQuestionDto: UpdateQuestionDto,
   ): Promise<QuestionResponseDto> {
-    // Kiểm tra question có tồn tại không
     await this.getQuestionById(id);
 
     return this.questionRepository.updateQuestion(id, updateQuestionDto);
@@ -71,7 +68,6 @@ export class QuestionsService {
   async deleteQuestion(id: string): Promise<void> {
     const question = await this.getQuestionById(id);
 
-    // Cleanup assets
     const publicIds: string[] = Array.isArray(question.publicIds)
       ? question.publicIds
       : [];
@@ -88,7 +84,15 @@ export class QuestionsService {
       questionId: createAnswerDto.questionId,
       authorId: createAnswerDto.authorId,
     };
-    return this.questionRepository.createAnswer(data);
+    try {
+      return await this.questionRepository.createAnswer(data);
+    } catch (error) {
+      const code = error?.code;
+      if (code === 'P2003') {
+        throw new NotFoundError('Question Not Found');
+      }
+      throw error;
+    }
   }
 
   async getAnswers(params: {
@@ -130,6 +134,16 @@ export class QuestionsService {
     if (!existing) {
       throw new NotFoundError('Answer not found');
     }
+    // If accepting an answer, ensure single accepted and update question status
+    if (updateAnswerDto?.isAccepted === true) {
+      await this.questionRepository.acceptAnswer(id);
+      const updated = await this.questionRepository.findAnswerById(id);
+      if (!updated) {
+        throw new NotFoundError('Answer not found');
+      }
+      return updated;
+    }
+
     return this.questionRepository.updateAnswer(id, updateAnswerDto);
   }
 

@@ -11,6 +11,7 @@ export interface DoctorDto {
   yearsExperience?: number;
   ratingAvg: number;
   reviewCount: number;
+  appointmentDuration?: number;
   specialties?: SpecialtyDto[];
   workLocations?: WorkLocationDto[];
 }

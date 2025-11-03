@@ -19,15 +19,32 @@ import {
   RequireUpdatePermission,
   RequireDeletePermission,
   CurrentUser,
+  Public,
 } from '@app/contracts';
 import { MicroserviceService } from '../utils/microservice.service';
+import { PublicCreateThrottle } from '../utils/custom-throttle.decorator';
 
 @Controller('patients')
 export class PatientsController {
   constructor(
     @Inject('ACCOUNTS_SERVICE') private readonly accountsClient: ClientProxy,
+    @Inject('BOOKING_SERVICE') private readonly bookingClient: ClientProxy,
     private readonly microserviceService: MicroserviceService,
   ) {}
+
+  // Public - create patient as guest
+  @Public()
+  @PublicCreateThrottle()
+  @Post('public')
+  async createPublic(
+    @Body() createPatientDto: CreatePatientDto,
+  ): Promise<PatientDto> {
+    return this.microserviceService.sendWithTimeout<PatientDto>(
+      this.bookingClient,
+      'patients.create',
+      createPatientDto,
+    );
+  }
 
   @RequireUpdatePermission('patients')
   @Post()

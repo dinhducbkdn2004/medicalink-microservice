@@ -3,8 +3,11 @@ export interface PatientFilterOptions {
   fullName?: string;
   email?: string;
   phone?: string;
-  nationalId?: string;
   isMale?: boolean;
+  dateOfBirth?: Date | null;
+  addressLine?: string | null;
+  district?: string | null;
+  province?: string | null;
   deletedAt?: Date | null;
   createdAt?: {
     gte?: Date;

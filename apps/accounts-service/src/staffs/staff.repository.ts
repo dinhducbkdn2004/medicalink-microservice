@@ -7,6 +7,7 @@ import {
   StaffQueryDto,
 } from '@app/contracts/dtos/staff';
 import * as bcrypt from 'bcrypt';
+import { normalizeDateInputToUtcDate } from '@app/commons/utils';
 
 @Injectable()
 export class StaffRepository {
@@ -52,17 +53,18 @@ export class StaffRepository {
     }
 
     if (createdFrom || createdTo) {
-      where.createdAt = {};
+      const createdAtFilter: Prisma.DateTimeFilter = {};
       if (createdFrom) {
-        where.createdAt.gte = new Date(createdFrom);
+        createdAtFilter.gte = new Date(createdFrom);
       }
       if (createdTo) {
-        where.createdAt.lte = new Date(createdTo);
+        createdAtFilter.lte = new Date(createdTo);
       }
+      where.createdAt = createdAtFilter;
     }
 
     const orderBy: Prisma.StaffAccountOrderByWithRelationInput = {};
-    orderBy[sortBy] = sortOrder;
+    (orderBy as any)[sortBy] = sortOrder;
 
     const [data, total] = await Promise.all([
       this.prisma.staffAccount.findMany({
@@ -110,6 +112,7 @@ export class StaffRepository {
 
   async create(data: CreateAccountDto): Promise<StaffAccount> {
     const hashedPassword = await bcrypt.hash(data.password, 10);
+    const dob = normalizeDateInputToUtcDate((data as any).dateOfBirth) ?? null;
 
     return this.prisma.staffAccount.create({
       data: {
@@ -119,7 +122,7 @@ export class StaffRepository {
         role: data.role,
         phone: data.phone,
         isMale: data.isMale,
-        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+        dateOfBirth: dob,
       },
     });
   }
@@ -130,8 +133,12 @@ export class StaffRepository {
       email: data.email,
       phone: data.phone,
       isMale: data.isMale,
-      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
     };
+
+    const dob = normalizeDateInputToUtcDate((data as any).dateOfBirth);
+    if (dob !== undefined) {
+      updateData.dateOfBirth = dob;
+    }
 
     if (data.password) {
       updateData.passwordHash = await bcrypt.hash(data.password, 10);
@@ -211,7 +218,7 @@ export class StaffRepository {
 
     // Populate with actual counts
     roleStats.forEach((stat) => {
-      byRole[stat.role] = stat._count.id;
+      (byRole as any)[stat.role] = stat._count.id;
     });
 
     // Get recently created staffs (this week)
@@ -235,7 +242,7 @@ export class StaffRepository {
 
     return {
       total,
-      byRole,
+      byRole: byRole as any,
       recentlyCreated,
       deleted,
     };

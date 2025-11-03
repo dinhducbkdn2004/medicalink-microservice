@@ -50,3 +50,16 @@ export const getInitials = (
   const initials = words.map((word) => word[0]).join(joinChar);
   return initials.slice(0, maxLength);
 };
+
+export const commaSeparatedStringToArray = (
+  value: any,
+): string[] | undefined => {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return value;
+  return typeof value === 'string'
+    ? value
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0)
+    : value;
+};

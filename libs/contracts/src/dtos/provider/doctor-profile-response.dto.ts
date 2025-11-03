@@ -4,6 +4,7 @@ export class DoctorProfileResponseDto {
   id: string;
   staffAccountId: string;
   isActive: boolean;
+  appointmentDuration: number;
   degree?: string;
   position: string[];
   introduction?: string;

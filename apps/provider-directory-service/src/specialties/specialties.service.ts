@@ -16,7 +16,8 @@ import {
 } from '@app/contracts';
 import { NotFoundError, ConflictError } from '@app/domain-errors';
 import { RabbitMQService } from '@app/rabbitmq';
-import { ORCHESTRATOR_EVENTS } from '@app/contracts/patterns';
+import { ASSETS_PATTERNS } from '@app/contracts/patterns';
+import { DoctorCacheInvalidationService } from '../cache/doctor-cache-invalidation.service';
 import { extractPublicIdFromUrl } from '@app/commons/utils';
 
 @Injectable()
@@ -27,6 +28,7 @@ export class SpecialtiesService {
     private readonly specialtyRepository: SpecialtyRepository,
     private readonly specialtyInfoSectionRepository: SpecialtyInfoSectionRepository,
     private readonly rabbitMQService: RabbitMQService,
+    private readonly doctorCacheInvalidation: DoctorCacheInvalidationService,
   ) {}
 
   async findAllPublic(
@@ -106,24 +108,10 @@ export class SpecialtiesService {
       infoSectionsCount: 0,
     });
 
-    // Emit SPECIALTY_CREATED event for asset management
-    try {
-      const iconAssets = this.extractAssetPublicIds(specialtyResponse);
+    // Synchronous cache invalidation for doctor lists impacted by specialties
+    await this.doctorCacheInvalidation.invalidateDoctorLists();
 
-      this.rabbitMQService.emitEvent(ORCHESTRATOR_EVENTS.SPECIALTY_CREATED, {
-        specialtyId: specialtyResponse.id,
-        iconAssets,
-        assetPublicIds: iconAssets,
-      });
-
-      this.logger.log(
-        `Emitted SPECIALTY_CREATED event for specialty ${specialtyResponse.id}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to emit SPECIALTY_CREATED event: ${error.message}`,
-      );
-    }
+    // No asset create; only ensure cleanup if needed (none on create)
 
     return specialtyResponse;
   }
@@ -144,7 +132,7 @@ export class SpecialtiesService {
       ...existingSpecialty,
       infoSectionsCount: 0,
     });
-    const prevIconAssets = this.extractAssetPublicIds(prevSpecialtyResponse);
+    const _prevIconAssets = this.extractAssetPublicIds(prevSpecialtyResponse);
 
     // Check if name is being updated and already exists
     if (
@@ -168,25 +156,20 @@ export class SpecialtiesService {
       infoSectionsCount: specialtyWithCount!._count.infoSections,
     });
 
-    // Emit SPECIALTY_UPDATED event for asset management
+    // Synchronous cache invalidation for doctor lists impacted by specialties
+    await this.doctorCacheInvalidation.invalidateDoctorLists();
+
+    // Minimal asset reconcile via content-service
     try {
-      const nextIconAssets = this.extractAssetPublicIds(specialtyResponse);
-
-      this.rabbitMQService.emitEvent(ORCHESTRATOR_EVENTS.SPECIALTY_UPDATED, {
-        specialtyId: specialtyResponse.id,
-        iconAssets: nextIconAssets,
-        prevIconAssets,
-        nextIconAssets,
-        assetPublicIds: nextIconAssets,
-      });
-
-      this.logger.log(
-        `Emitted SPECIALTY_UPDATED event for specialty ${specialtyResponse.id}`,
+      await this.rabbitMQService.sendMessage<void>(
+        ASSETS_PATTERNS.RECONCILE_ENTITY,
+        {
+          prevPublicIds: _prevIconAssets,
+          nextPublicIds: this.extractAssetPublicIds(specialtyResponse),
+        },
       );
-    } catch (error) {
-      this.logger.error(
-        `Failed to emit SPECIALTY_UPDATED event: ${error.message}`,
-      );
+    } catch (_) {
+      // skip
     }
 
     return specialtyResponse;
@@ -205,7 +188,7 @@ export class SpecialtiesService {
       ...existingSpecialty,
       infoSectionsCount: 0,
     });
-    const iconAssets = this.extractAssetPublicIds(specialtyResponse);
+    const _iconAssets = this.extractAssetPublicIds(specialtyResponse);
 
     const specialty = await this.specialtyRepository.delete(id);
     const deletedSpecialtyResponse = this.mapToSpecialtyResponseDto({
@@ -213,21 +196,17 @@ export class SpecialtiesService {
       infoSectionsCount: 0,
     });
 
-    // Emit SPECIALTY_DELETED event for asset management
-    try {
-      this.rabbitMQService.emitEvent(ORCHESTRATOR_EVENTS.SPECIALTY_DELETED, {
-        specialtyId: deletedSpecialtyResponse.id,
-        iconAssets,
-        assetPublicIds: iconAssets,
-      });
+    // Synchronous cache invalidation for doctor lists impacted by specialties
+    await this.doctorCacheInvalidation.invalidateDoctorLists();
 
-      this.logger.log(
-        `Emitted SPECIALTY_DELETED event for specialty ${deletedSpecialtyResponse.id}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to emit SPECIALTY_DELETED event: ${error.message}`,
-      );
+    // Minimal orphan cleanup via content-service
+    try {
+      await this.rabbitMQService.sendMessage<{
+        deletedDb: number;
+        requested: number;
+      }>(ASSETS_PATTERNS.CLEANUP_ORPHANED, { publicIds: _iconAssets });
+    } catch (_) {
+      // skip
     }
 
     return deletedSpecialtyResponse;

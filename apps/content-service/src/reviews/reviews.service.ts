@@ -3,17 +3,31 @@ import { ReviewRepository } from './review.repository';
 import { CreateReviewDto, ReviewResponseDto } from '@app/contracts';
 import { AssetsMaintenanceService } from '../assets/assets-maintenance.service';
 import { NotFoundError } from '@app/domain-errors';
+import { RabbitMQService } from '@app/rabbitmq';
+import { DOCTOR_PROFILES_PATTERNS } from '@app/contracts/patterns';
 
 @Injectable()
 export class ReviewsService {
   constructor(
     private readonly reviewRepository: ReviewRepository,
     private readonly assetsMaintenance: AssetsMaintenanceService,
+    private readonly rabbitMQService: RabbitMQService,
   ) {}
 
   async createReview(
     createReviewDto: CreateReviewDto,
   ): Promise<ReviewResponseDto> {
+    // Validate doctor exists in provider-directory
+    try {
+      await this.rabbitMQService.sendMessage(
+        DOCTOR_PROFILES_PATTERNS.FIND_ONE,
+        String(createReviewDto.doctorId),
+        { timeout: 8000 },
+      );
+    } catch (_error) {
+      throw new NotFoundError('Doctor not found');
+    }
+
     return this.reviewRepository.createReview(createReviewDto);
   }
 
@@ -39,6 +53,16 @@ export class ReviewsService {
     limit: number;
     doctorId: string;
   }) {
+    // Validate doctor exists before fetching
+    try {
+      await this.rabbitMQService.sendMessage(
+        DOCTOR_PROFILES_PATTERNS.FIND_ONE,
+        String(params.doctorId),
+        { timeout: 8000 },
+      );
+    } catch (_error) {
+      throw new NotFoundError('Doctor not found');
+    }
     const result = await this.reviewRepository.findReviewsByDoctorId(params);
     const hasNext = params.page * params.limit < result.total;
     const hasPrev = params.page > 1;

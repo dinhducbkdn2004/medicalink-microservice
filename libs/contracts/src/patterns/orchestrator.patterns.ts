@@ -19,6 +19,9 @@ export const ORCHESTRATOR_PATTERNS = {
   BLOG_PUBLIC_LIST_COMPOSITE: 'orchestrator.blog.publicListComposite',
   BLOG_PUBLIC_GET_COMPOSITE: 'orchestrator.blog.publicGetComposite',
 
+  // Schedule slots composition (read)
+  SCHEDULE_SLOTS_LIST: 'orchestrator.scheduleSlots.list',
+
   // Appointment orchestration (future)
   APPOINTMENT_CREATE: 'orchestrator.appointment.create',
   APPOINTMENT_RESCHEDULE: 'orchestrator.appointment.reschedule',

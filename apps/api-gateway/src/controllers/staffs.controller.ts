@@ -22,6 +22,7 @@ import {
   RequireUserManagement,
   CurrentUser,
   PaginatedResponse,
+  STAFFS_PATTERNS,
 } from '@app/contracts';
 import type { JwtPayloadDto, PostResponseDto } from '@app/contracts';
 import { MicroserviceService } from '../utils/microservice.service';
@@ -41,7 +42,9 @@ export class StaffsController {
   ): Promise<PaginatedResponse<IStaffAccount>> {
     return this.microserviceService.sendWithTimeout<
       PaginatedResponse<IStaffAccount>
-    >(this.accountsClient, 'staffs.findAll', query, { timeoutMs: 15000 });
+    >(this.accountsClient, STAFFS_PATTERNS.FIND_ALL, query, {
+      timeoutMs: 15000,
+    });
   }
 
   @RequireReadPermission('staff')
@@ -49,7 +52,7 @@ export class StaffsController {
   async getStats(): Promise<StaffStatsDto> {
     return this.microserviceService.sendWithTimeout<StaffStatsDto>(
       this.accountsClient,
-      'staffs.stats',
+      STAFFS_PATTERNS.STATS,
       {},
     );
   }
@@ -62,7 +65,7 @@ export class StaffsController {
   ): Promise<IStaffAccount> {
     const staff = await this.microserviceService.sendWithTimeout<IStaffAccount>(
       this.accountsClient,
-      'staffs.findOne',
+      STAFFS_PATTERNS.FIND_ONE,
       id,
     );
 
@@ -77,7 +80,7 @@ export class StaffsController {
   ): Promise<IStaffAccount> {
     return this.microserviceService.sendWithTimeout<IStaffAccount>(
       this.accountsClient,
-      'staffs.create',
+      STAFFS_PATTERNS.CREATE,
       createAccountDto,
       { timeoutMs: 12000 },
     );
@@ -92,7 +95,7 @@ export class StaffsController {
   ): Promise<IStaffAccount> {
     return this.microserviceService.sendWithTimeout<IStaffAccount>(
       this.accountsClient,
-      'staffs.update',
+      STAFFS_PATTERNS.UPDATE,
       {
         id,
         data: updateStaffDto,
@@ -106,7 +109,7 @@ export class StaffsController {
   async remove(@Param('id') id: string): Promise<PostResponseDto> {
     return this.microserviceService.sendWithTimeout<PostResponseDto>(
       this.accountsClient,
-      'staffs.remove',
+      STAFFS_PATTERNS.REMOVE,
       id,
       { timeoutMs: 12000 },
     );

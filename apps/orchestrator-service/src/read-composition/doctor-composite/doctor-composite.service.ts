@@ -225,8 +225,8 @@ export class DoctorCompositeService extends BaseCompositeService<
     const {
       email,
       phone,
-      accountCreatedAt,
-      accountUpdatedAt,
+      createdAt,
+      updatedAt,
       profileCreatedAt,
       profileUpdatedAt,
       specialties,
@@ -287,8 +287,8 @@ export class DoctorCompositeService extends BaseCompositeService<
       workLocations: profile.workLocations,
 
       // Timestamps
-      accountCreatedAt: account.createdAt,
-      accountUpdatedAt: account.updatedAt,
+      createdAt: account.createdAt,
+      updatedAt: account.updatedAt,
       profileCreatedAt: profile.createdAt,
       profileUpdatedAt: profile.updatedAt,
     };

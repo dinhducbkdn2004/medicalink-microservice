@@ -4,7 +4,6 @@ import { QuestionsService } from './questions.service';
 import {
   CreateQuestionDto,
   UpdateQuestionDto,
-  CreateAnswerDto,
   UpdateAnswerDto,
   GetQuestionsQueryDto,
 } from '@app/contracts/dtos/content';

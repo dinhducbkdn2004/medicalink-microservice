@@ -1,38 +1,23 @@
 import { Type, Transform } from 'class-transformer';
 import { IsOptional, IsString, IsArray, IsBoolean } from 'class-validator';
 import { PaginationDto } from '../common';
+import { commaSeparatedStringToArray } from '@app/commons/utils/text-format';
 
 export class DoctorProfileQueryDto extends PaginationDto {
   @IsOptional()
+  @Transform(({ value }) => {
+    return commaSeparatedStringToArray(value);
+  })
   @IsArray({ message: 'Specialty IDs must be an array' })
   @IsString({ each: true, message: 'Each specialty ID must be a string' })
-  @Transform(({ value }) => {
-    if (!value) return undefined;
-    if (Array.isArray(value)) return value;
-    // Convert comma-separated string to array
-    return typeof value === 'string'
-      ? value
-          .split(',')
-          .map((id) => id.trim())
-          .filter((id) => id.length > 0)
-      : value;
-  })
   specialtyIds?: string[];
 
   @IsOptional()
+  @Transform(({ value }) => {
+    return commaSeparatedStringToArray(value);
+  })
   @IsArray({ message: 'Work location IDs must be an array' })
   @IsString({ each: true, message: 'Each work location ID must be a string' })
-  @Transform(({ value }) => {
-    if (!value) return undefined;
-    if (Array.isArray(value)) return value;
-    // Convert comma-separated string to array
-    return typeof value === 'string'
-      ? value
-          .split(',')
-          .map((id) => id.trim())
-          .filter((id) => id.length > 0)
-      : value;
-  })
   workLocationIds?: string[];
 
   @IsOptional()
@@ -42,6 +27,9 @@ export class DoctorProfileQueryDto extends PaginationDto {
 }
 
 export class GetDoctorsByAccountIdsDto {
+  @Transform(({ value }) => {
+    return commaSeparatedStringToArray(value);
+  })
   @IsArray({ message: 'Staff account IDs must be an array' })
   @IsString({ each: true, message: 'Each staff account ID must be a string' })
   staffAccountIds: string[];
@@ -52,11 +40,17 @@ export class GetDoctorsByAccountIdsDto {
   isActive?: boolean;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    return commaSeparatedStringToArray(value);
+  })
   @IsArray({ message: 'Specialty IDs must be an array' })
   @IsString({ each: true, message: 'Each specialty ID must be a string' })
   specialtyIds?: string[];
 
   @IsOptional()
+  @Transform(({ value }) => {
+    return commaSeparatedStringToArray(value);
+  })
   @IsArray({ message: 'Work location IDs must be an array' })
   @IsString({ each: true, message: 'Each location ID must be a string' })
   workLocationIds?: string[];
