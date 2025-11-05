@@ -21,6 +21,7 @@ import {
 } from '../../prisma/generated/client';
 import { BadRequestError, NotFoundError } from '@app/domain-errors';
 import { ListAppointmentsQueryDto } from '@app/contracts/dtos/api-gateway/appointments.dto';
+import { RescheduleAppointmentRequestDto } from '@app/contracts/dtos/api-gateway/appointments.dto';
 
 @Injectable()
 export class AppointmentsService {
@@ -245,6 +246,43 @@ export class AppointmentsService {
   async confirmAppointment(dto: ConfirmAppointmentDto): Promise<Appointment> {
     const appt = await this.appointmentsRepo.confirm(dto.id);
     return appt;
+  }
+
+  async rescheduleAppointment(
+    id: string,
+    dto: RescheduleAppointmentRequestDto,
+  ): Promise<Appointment> {
+    return this.prisma.$transaction(async (tx) => {
+      const appt = await tx.appointment.findUnique({
+        where: { id },
+        include: { event: true },
+      });
+      if (!appt) throw new NotFoundError('Appointment not found');
+
+      const updateEvent: any = {};
+      if (dto.serviceDate) updateEvent.serviceDate = toUtcDate(dto.serviceDate);
+      if (dto.timeStart) updateEvent.timeStart = dto.timeStart;
+      if (dto.timeEnd) updateEvent.timeEnd = dto.timeEnd;
+
+      if (Object.keys(updateEvent).length > 0) {
+        await tx.event.update({
+          where: { id: appt.eventId },
+          data: updateEvent,
+        });
+      }
+
+      const updateAppointment: any = {
+        status: 'RESCHEDULED' as AppointmentStatus,
+      };
+      if (dto.doctorId) updateAppointment.doctorId = dto.doctorId;
+      if (dto.locationId) updateAppointment.locationId = dto.locationId;
+
+      const updated = await tx.appointment.update({
+        where: { id },
+        data: updateAppointment,
+      });
+      return updated;
+    });
   }
 
   private async ensureAvailableSlot(args: {

@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePatientDto, UpdatePatientDto } from '@app/contracts';
+import {
+  CreatePatientDto,
+  UpdatePatientDto,
+  SearchOnePatientDto,
+} from '@app/contracts';
 import { PatientRepository } from './patients.repository';
 
 @Injectable()
@@ -61,6 +65,30 @@ export class PatientsService {
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async listWithLastAppointment(query: any) {
+    return await this.patientRepository.listWithLastAppointment(query);
+  }
+
+  async restore(id: string) {
+    return await this.patientRepository.restore(id);
+  }
+
+  async searchOneByIdentifiers(dto: SearchOnePatientDto) {
+    const dateOfBirth = (dto.dob as any) ? new Date(dto.dob as string) : null;
+    console.log({
+      email: dto.email,
+      phone: dto.phone,
+      fullName: dto.name,
+      dateOfBirth,
+    });
+    return await this.patientRepository.findOneByIdentifiers({
+      email: dto.email,
+      phone: dto.phone,
+      fullName: dto.name,
+      dateOfBirth,
     });
   }
 }

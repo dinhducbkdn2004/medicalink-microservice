@@ -6,6 +6,7 @@ import {
   IsEmail,
 } from 'class-validator';
 import { IsCuid } from '@app/contracts/decorators';
+import { Transform } from 'class-transformer';
 
 export class CreateQuestionDto {
   @IsString({ message: 'title must be a string' })
@@ -24,6 +25,7 @@ export class CreateQuestionDto {
 
   @IsEmail({}, { message: 'authorEmail must be a valid email address' })
   @IsOptional()
+  @Transform(({ value }) => value?.toLowerCase())
   authorEmail?: string;
 
   @IsCuid({ message: 'specialtyId must be a valid CUID' })

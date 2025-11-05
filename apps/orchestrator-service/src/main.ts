@@ -3,7 +3,7 @@ import { MicroserviceOptions } from '@nestjs/microservices';
 import { OrchestratorModule } from './orchestrator.module';
 import * as dotenv from 'dotenv';
 import { RpcDomainErrorFilter } from '@app/error-adapters';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { RabbitMQConfig, QUEUE_NAMES } from '@app/rabbitmq';
 import { ConfigService } from '@nestjs/config';
 

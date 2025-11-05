@@ -22,6 +22,9 @@ export const ORCHESTRATOR_PATTERNS = {
   // Schedule slots composition (read)
   SCHEDULE_SLOTS_LIST: 'orchestrator.scheduleSlots.list',
 
+  // Appointment composition (read)
+  APPOINTMENT_LIST_COMPOSITE: 'orchestrator.appointment.listComposite',
+
   // Appointment orchestration (future)
   APPOINTMENT_CREATE: 'orchestrator.appointment.create',
   APPOINTMENT_RESCHEDULE: 'orchestrator.appointment.reschedule',
