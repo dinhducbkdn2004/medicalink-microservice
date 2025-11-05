@@ -10,6 +10,7 @@ export * from './staffs.patterns';
 export * from './work-locations.patterns';
 export * from './office-hours.patterns';
 export * from './booking.patterns';
+export * from './patients.patterns';
 
 export * from './orchestrator.patterns';
 export * from './orchestrator.events';

@@ -14,6 +14,7 @@ import { PublicCreateAppointmentFromEventDto } from '@app/contracts/dtos/public-
 import { EventTempDto } from '@app/contracts/dtos/event-temp.dto';
 import { ListAppointmentsQueryDto } from '@app/contracts/dtos/api-gateway/appointments.dto';
 import { ListEventsQueryDto } from './dtos/list-events-query.dto';
+import { RescheduleAppointmentRequestDto } from '@app/contracts/dtos/api-gateway/appointments.dto';
 
 @Controller()
 export class AppointmentsController {
@@ -60,6 +61,12 @@ export class AppointmentsController {
     return this.appointmentsService.confirmAppointment(dto);
   }
 
+  @MessagePattern(BOOKING_PATTERNS.RESCHEDULE_APPOINTMENT)
+  rescheduleAppointment(
+    @Payload() payload: { id: string } & RescheduleAppointmentRequestDto,
+  ): Promise<Appointment> {
+    return this.appointmentsService.rescheduleAppointment(payload.id, payload);
+  }
   @MessagePattern(BOOKING_PATTERNS.CREATE_APPOINTMENT_FROM_EVENT)
   createAppointmentFromEvent(
     @Payload() dto: PublicCreateAppointmentFromEventDto,

@@ -5,6 +5,7 @@ export const BOOKING_PATTERNS = {
   UPDATE_APPOINTMENT: 'booking.appointment.update',
   CANCEL_APPOINTMENT: 'booking.appointment.cancel',
   CONFIRM_APPOINTMENT: 'booking.appointment.confirm',
+  RESCHEDULE_APPOINTMENT: 'booking.appointment.reschedule',
   LIST_APPOINTMENTS: 'booking.appointment.list',
   LIST_APPOINTMENTS_BY_FILTER: 'booking.appointment.listByFilter',
 
@@ -23,4 +24,4 @@ export const BOOKING_PATTERNS = {
   LIST_EVENTS_BY_FILTER: 'booking.event.listByFilter',
   CREATE_EVENT_TEMP: 'booking.event.createTemp',
   CREATE_APPOINTMENT_FROM_EVENT: 'booking.appointment.createFromEvent',
-} as const;
+};

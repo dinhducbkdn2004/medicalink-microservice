@@ -155,6 +155,30 @@ export class DoctorRepository {
     };
   }
 
+  /**
+   * Fetch minimal doctor profiles by IDs with lightweight select
+   */
+  async findMinimalByIds(ids: string[]): Promise<
+    {
+      id: string;
+      staffAccountId: string;
+      isActive: boolean;
+      avatarUrl?: string | null;
+    }[]
+  > {
+    if (!ids || ids.length === 0) return [];
+    const rows = await this.prisma.doctor.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        staffAccountId: true,
+        isActive: true,
+        avatarUrl: true,
+      },
+    });
+    return rows;
+  }
+
   async findOne(
     id: string,
     include: any = {},

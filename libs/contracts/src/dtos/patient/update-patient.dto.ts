@@ -11,6 +11,7 @@ import { Transform } from 'class-transformer';
 import { IsCuid } from '@app/contracts/decorators';
 
 export class UpdatePatientDto {
+  @IsOptional()
   @IsCuid({ message: 'ID must be a valid CUID' })
   id: string;
 
@@ -21,6 +22,7 @@ export class UpdatePatientDto {
 
   @IsOptional()
   @IsEmail({}, { message: 'Please provide a valid email address' })
+  @Transform(({ value }) => value?.toLowerCase())
   email?: string | null;
 
   @IsOptional()

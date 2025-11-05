@@ -30,6 +30,11 @@ export class DoctorsController {
     return this.doctorsService.findOne(String(id));
   }
 
+  @MessagePattern(DOCTOR_PROFILES_PATTERNS.GET_BY_IDS)
+  getByIds(@Payload() payload: { ids: string[] }) {
+    return this.doctorsService.getByIds(payload.ids);
+  }
+
   @MessagePattern(DOCTOR_PROFILES_PATTERNS.UPDATE)
   async update(@Payload() updateDoctorDto: UpdateDoctorProfileDto) {
     const { id, ...data } = updateDoctorDto;

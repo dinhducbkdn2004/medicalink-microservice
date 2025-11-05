@@ -19,7 +19,6 @@ import {
   RequireCreatePermission,
 } from '@app/contracts';
 import {
-  AppointmentDto,
   UpdateAppointmentDto,
   CancelAppointmentDto,
   ConfirmAppointmentDto,
@@ -48,19 +47,34 @@ export class AppointmentsController {
   // Appointments CRUD
   @RequireReadPermission('appointments')
   @Get()
-  list(@Query() query: ListAppointmentsQueryDto): Promise<AppointmentDto[]> {
-    return this.microserviceService.sendWithTimeout<AppointmentDto[]>(
-      this.bookingClient,
-      BOOKING_PATTERNS.LIST_APPOINTMENTS,
+  list(@Query() query: ListAppointmentsQueryDto) {
+    return this.microserviceService.sendWithTimeout<any>(
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.APPOINTMENT_LIST_COMPOSITE,
       query,
-      { timeoutMs: 10000 },
+      { timeoutMs: 12000 },
+    );
+  }
+
+  // Public - list appointments by patient id (composited with doctorName)
+  @Public()
+  @Get('public/patient/:patientId')
+  getByPatientPublic(
+    @Param('patientId') patientId: string,
+    @Query() query: ListAppointmentsQueryDto,
+  ) {
+    return this.microserviceService.sendWithTimeout(
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.APPOINTMENT_LIST_COMPOSITE,
+      { ...query, patientId },
+      { timeoutMs: 12000 },
     );
   }
 
   @RequireReadPermission('appointments')
   @Get(':id')
-  getById(@Param('id') id: string): Promise<AppointmentDto> {
-    return this.microserviceService.sendWithTimeout<AppointmentDto>(
+  getById(@Param('id') id: string) {
+    return this.microserviceService.sendWithTimeout(
       this.bookingClient,
       BOOKING_PATTERNS.GET_APPOINTMENT,
       id,
@@ -71,10 +85,8 @@ export class AppointmentsController {
   @Public()
   @PublicCreateThrottle()
   @Post('public')
-  async createPublic(
-    @Body() body: PublicCreateAppointmentFromEventDto,
-  ): Promise<AppointmentDto> {
-    return this.microserviceService.sendWithTimeout<AppointmentDto>(
+  async createPublic(@Body() body: PublicCreateAppointmentFromEventDto) {
+    return this.microserviceService.sendWithTimeout(
       this.bookingClient,
       BOOKING_PATTERNS.CREATE_APPOINTMENT_FROM_EVENT,
       body,
@@ -84,10 +96,8 @@ export class AppointmentsController {
 
   @RequireCreatePermission('appointments')
   @Post()
-  async create(
-    @Body() body: CreateAppointmentRequestDto,
-  ): Promise<AppointmentDto> {
-    return this.microserviceService.sendWithTimeout<AppointmentDto>(
+  async create(@Body() body: CreateAppointmentRequestDto) {
+    return this.microserviceService.sendWithTimeout(
       this.bookingClient,
       BOOKING_PATTERNS.CREATE_APPOINTMENT,
       body,
@@ -111,12 +121,12 @@ export class AppointmentsController {
   update(
     @Param('id') id: string,
     @Body() dto: Omit<UpdateAppointmentDto, 'id'>,
-  ): Promise<AppointmentDto> {
+  ) {
     const payload: UpdateAppointmentDto = {
       id,
       ...dto,
     } as UpdateAppointmentDto;
-    return this.microserviceService.sendWithTimeout<AppointmentDto>(
+    return this.microserviceService.sendWithTimeout(
       this.bookingClient,
       BOOKING_PATTERNS.UPDATE_APPOINTMENT,
       payload,
@@ -124,37 +134,34 @@ export class AppointmentsController {
     );
   }
 
-  // Reschedule via orchestrator saga
+  // Reschedule directly via booking-service
   @RequireUpdatePermission('appointments')
   @Patch(':id/reschedule')
   async reschedule(
     @Param('id') id: string,
     @Body() body: RescheduleAppointmentRequestDto,
-  ): Promise<any> {
-    const payload = { oldAppointmentId: id, ...body };
+  ) {
+    const payload = { id, ...body };
     return this.microserviceService.sendWithTimeout(
-      this.orchestratorClient,
-      ORCHESTRATOR_PATTERNS.APPOINTMENT_RESCHEDULE,
+      this.bookingClient,
+      BOOKING_PATTERNS.RESCHEDULE_APPOINTMENT,
       payload,
-      { timeoutMs: 25000 },
+      { timeoutMs: 15000 },
     );
   }
 
   @RequireDeletePermission('appointments')
   @Delete(':id')
-  cancel(
-    @Param('id') id: string,
-    @Body() body: CancelAppointmentBodyDto,
-  ): Promise<AppointmentDto> {
+  cancel(@Param('id') id: string, @Body() body: CancelAppointmentBodyDto) {
     const payload: CancelAppointmentDto = {
       id,
       reason: body?.reason,
       cancelledBy: 'STAFF',
     };
-    // Route cancel through orchestrator (saga-aware)
-    return this.microserviceService.sendWithTimeout<AppointmentDto>(
-      this.orchestratorClient,
-      ORCHESTRATOR_PATTERNS.APPOINTMENT_CANCEL,
+    // Cancel directly via booking-service
+    return this.microserviceService.sendWithTimeout(
+      this.bookingClient,
+      BOOKING_PATTERNS.CANCEL_APPOINTMENT,
       payload,
       { timeoutMs: 12000 },
     );
@@ -162,9 +169,9 @@ export class AppointmentsController {
 
   @RequireUpdatePermission('appointments')
   @Post(':id/confirm')
-  confirm(@Param('id') id: string): Promise<AppointmentDto> {
+  confirm(@Param('id') id: string) {
     const payload: ConfirmAppointmentDto = { id };
-    return this.microserviceService.sendWithTimeout<AppointmentDto>(
+    return this.microserviceService.sendWithTimeout(
       this.bookingClient,
       BOOKING_PATTERNS.CONFIRM_APPOINTMENT,
       payload,

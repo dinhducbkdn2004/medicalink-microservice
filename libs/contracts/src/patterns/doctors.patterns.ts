@@ -12,6 +12,7 @@ export const DOCTOR_PROFILES_PATTERNS = {
   CREATE: 'doctor-profiles.create',
   CREATE_EMPTY: 'doctor-profiles.createEmpty',
   FIND_ONE: 'doctor-profiles.findOne',
+  GET_BY_IDS: 'doctor-profiles.getByIds',
   UPDATE: 'doctor-profiles.update',
   UPDATE_SELF: 'doctor-profiles.updateSelf',
   REMOVE: 'doctor-profiles.remove',

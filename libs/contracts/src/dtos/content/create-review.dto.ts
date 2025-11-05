@@ -1,4 +1,5 @@
 import { IsCuid } from '@app/contracts/decorators';
+import { Transform } from 'class-transformer';
 import {
   IsNumber,
   IsString,
@@ -28,6 +29,7 @@ export class CreateReviewDto {
 
   @IsEmail({}, { message: 'Please provide a valid email address' })
   @IsOptional()
+  @Transform(({ value }) => value?.toLowerCase())
   authorEmail?: string;
 
   @IsCuid({ message: 'Doctor ID must be a valid CUID' })

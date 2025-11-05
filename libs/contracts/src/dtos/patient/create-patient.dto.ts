@@ -16,6 +16,7 @@ export class CreatePatientDto {
 
   @IsOptional()
   @IsEmail({}, { message: 'Please provide a valid email address' })
+  @Transform(({ value }) => value?.toLowerCase())
   email?: string | null;
 
   @IsOptional()

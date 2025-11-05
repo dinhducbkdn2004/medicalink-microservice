@@ -106,6 +106,13 @@ export class DoctorsService {
     return doctor;
   }
 
+  async getByIds(ids: string[]): Promise<Partial<DoctorProfileResponseDto>[]> {
+    if (!ids || ids.length === 0) return [];
+    // Lightweight query: only select minimal fields to reduce payload
+    const minimal = await this.doctorRepo.findMinimalByIds(ids);
+    return minimal as Partial<DoctorProfileResponseDto>[];
+  }
+
   async update(
     id: string,
     updateDoctorDto: Omit<UpdateDoctorProfileDto, 'id'>,
