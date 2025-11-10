@@ -24,6 +24,7 @@ export interface PermissionContext {
   isSelf?: boolean;
   resourceId?: string;
   patientId?: string;
+  answerId?: string;
   [key: string]: any;
 }
 
@@ -118,6 +119,12 @@ export class PermissionGuard implements CanActivate {
       userId: user.sub,
     };
 
+    // Mark self for explicit '/me' routes
+    const path = (request as any)?.originalUrl || (request as any)?.url || '';
+    if (typeof path === 'string' && /(^|\/)me(\/|$)/.test(path)) {
+      context.isSelf = true;
+    }
+
     // Extract context from route parameters
     const params = request.params;
     if (params) {
@@ -140,6 +147,12 @@ export class PermissionGuard implements CanActivate {
       }
       if (params.patientId) {
         context.patientId = params.patientId;
+      }
+      if (params.answerId) {
+        context.answerId = params.answerId;
+        if (!context.resourceId) {
+          context.resourceId = params.answerId;
+        }
       }
 
       // Generic mapping: infer common ids from param keys

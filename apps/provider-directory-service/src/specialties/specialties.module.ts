@@ -6,9 +6,10 @@ import { SpecialtyInfoSectionRepository } from './specialty-info-section.reposit
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisModule } from '@app/redis';
 import { DoctorCacheInvalidationService } from '../cache/doctor-cache-invalidation.service';
+import { MicroserviceClientsModule } from '../clients/microservice-clients.module';
 
 @Module({
-  imports: [RedisModule],
+  imports: [RedisModule, MicroserviceClientsModule],
   controllers: [SpecialtiesController],
   providers: [
     SpecialtiesService,

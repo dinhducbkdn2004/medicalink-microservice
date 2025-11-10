@@ -38,6 +38,7 @@ model Blog {
   title        String     @db.VarChar(200)
   slug         String     @unique @db.VarChar(220)
   content      String     @db.Text
+  viewCount    Int        @default(0) @map("view_count")
   categoryId   String     @map("category_id") @db.VarChar(27)
   specialtyIds String[]   @map("specialty_ids") @db.VarChar(27)
   authorId     String     @map("author_id") @db.VarChar(27)
@@ -58,6 +59,7 @@ model Question {
   authorEmail String?        @map("author_email") @db.VarChar(120)
   title       String         @db.VarChar(200)
   body        String         @db.Text
+  viewCount   Int            @default(0) @map("view_count")
   status      QuestionStatus @default(PENDING)
   specialtyId String?        @map("specialty_id") @db.VarChar(27)
   createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)

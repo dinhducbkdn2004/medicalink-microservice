@@ -25,8 +25,8 @@ export class QuestionsController {
   }
 
   @MessagePattern(QUESTIONS_PATTERNS.GET_BY_ID)
-  findOne(@Payload() data: { id: string }) {
-    return this.questionsService.getQuestionById(data.id);
+  findOne(@Payload() data: { id: string; increaseView?: boolean }) {
+    return this.questionsService.getQuestionById(data.id, data.increaseView);
   }
 
   @MessagePattern(QUESTIONS_PATTERNS.UPDATE)

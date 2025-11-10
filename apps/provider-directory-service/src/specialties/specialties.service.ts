@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { SpecialtyRepository } from './specialty.repository';
 import { SpecialtyInfoSectionRepository } from './specialty-info-section.repository';
 import {
@@ -15,10 +15,11 @@ import {
   SpecialtyInfoSectionResponseDto,
 } from '@app/contracts';
 import { NotFoundError, ConflictError } from '@app/domain-errors';
-import { RabbitMQService } from '@app/rabbitmq';
 import { ASSETS_PATTERNS } from '@app/contracts/patterns';
 import { DoctorCacheInvalidationService } from '../cache/doctor-cache-invalidation.service';
 import { extractPublicIdFromUrl } from '@app/commons/utils';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom, timeout } from 'rxjs';
 
 @Injectable()
 export class SpecialtiesService {
@@ -27,8 +28,9 @@ export class SpecialtiesService {
   constructor(
     private readonly specialtyRepository: SpecialtyRepository,
     private readonly specialtyInfoSectionRepository: SpecialtyInfoSectionRepository,
-    private readonly rabbitMQService: RabbitMQService,
     private readonly doctorCacheInvalidation: DoctorCacheInvalidationService,
+    @Inject('CONTENT_SERVICE')
+    private readonly contentClient: ClientProxy,
   ) {}
 
   async findAllPublic(
@@ -159,18 +161,10 @@ export class SpecialtiesService {
     // Synchronous cache invalidation for doctor lists impacted by specialties
     await this.doctorCacheInvalidation.invalidateDoctorLists();
 
-    // Minimal asset reconcile via content-service
-    try {
-      await this.rabbitMQService.sendMessage<void>(
-        ASSETS_PATTERNS.RECONCILE_ENTITY,
-        {
-          prevPublicIds: _prevIconAssets,
-          nextPublicIds: this.extractAssetPublicIds(specialtyResponse),
-        },
-      );
-    } catch (_) {
-      // skip
-    }
+    await this.safeContentCall<void>(ASSETS_PATTERNS.RECONCILE_ENTITY, {
+      prevPublicIds: _prevIconAssets,
+      nextPublicIds: this.extractAssetPublicIds(specialtyResponse),
+    });
 
     return specialtyResponse;
   }
@@ -199,15 +193,10 @@ export class SpecialtiesService {
     // Synchronous cache invalidation for doctor lists impacted by specialties
     await this.doctorCacheInvalidation.invalidateDoctorLists();
 
-    // Minimal orphan cleanup via content-service
-    try {
-      await this.rabbitMQService.sendMessage<{
-        deletedDb: number;
-        requested: number;
-      }>(ASSETS_PATTERNS.CLEANUP_ORPHANED, { publicIds: _iconAssets });
-    } catch (_) {
-      // skip
-    }
+    await this.safeContentCall<{ deletedDb: number; requested: number }>(
+      ASSETS_PATTERNS.CLEANUP_ORPHANED,
+      { publicIds: _iconAssets },
+    );
 
     return deletedSpecialtyResponse;
   }
@@ -395,5 +384,23 @@ export class SpecialtiesService {
     }
 
     return assets;
+  }
+
+  private async safeContentCall<T>(
+    pattern: string,
+    payload: any,
+  ): Promise<T | void> {
+    try {
+      return await firstValueFrom(
+        this.contentClient.send<T>(pattern, payload).pipe(timeout(8000)),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Content RPC ${pattern} failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return;
+    }
   }
 }

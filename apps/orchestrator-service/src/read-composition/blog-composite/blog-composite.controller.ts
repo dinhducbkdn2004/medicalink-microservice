@@ -23,8 +23,12 @@ export class BlogCompositeController {
    * Get published blog by slug with composed data (for public access)
    */
   @MessagePattern(ORCHESTRATOR_PATTERNS.BLOG_PUBLIC_GET_COMPOSITE)
-  async getPublishedBySlug(@Payload() payload: { slug: string }) {
-    return this.blogCompositeService.getPublishedBySlug(payload.slug);
+  async getPublishedBySlug(
+    @Payload() payload: { slug: string; increaseView?: boolean },
+  ) {
+    return this.blogCompositeService.getPublishedBySlug(payload.slug, {
+      increaseView: payload.increaseView,
+    });
   }
 
   /**

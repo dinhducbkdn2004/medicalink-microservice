@@ -118,11 +118,18 @@ export class BlogsController {
   // Public - get blog by slug with author info (published only)
   @Public()
   @Get('/public/:slug')
-  async findOnePublic(@Param('slug') slug: string) {
+  async findOnePublic(
+    @Param('slug') slug: string,
+    @Query('increaseView') increaseView?: string,
+  ) {
+    const shouldIncrease =
+      typeof increaseView === 'string'
+        ? increaseView.toLowerCase() !== 'false'
+        : true;
     return this.microserviceService.sendWithTimeout(
       this.orchestratorClient,
       ORCHESTRATOR_PATTERNS.BLOG_PUBLIC_GET_COMPOSITE,
-      { slug },
+      { slug, increaseView: shouldIncrease },
     );
   }
 

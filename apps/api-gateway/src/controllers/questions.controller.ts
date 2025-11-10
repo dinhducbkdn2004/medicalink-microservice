@@ -29,7 +29,6 @@ import {
   CreateQuestionDto,
   UpdateQuestionDto,
   CreateAnswerDto,
-  UpdateAnswerDto,
 } from '@app/contracts/dtos';
 
 @Controller('questions')
@@ -65,11 +64,18 @@ export class QuestionsController {
   // Public - get question by id
   @Public()
   @Get(':id')
-  async findQuestionById(@Param('id') id: string) {
+  async findQuestionById(
+    @Param('id') id: string,
+    @Query('increaseView') increaseView?: string,
+  ) {
+    const shouldIncrease =
+      typeof increaseView === 'string'
+        ? increaseView.toLowerCase() !== 'false'
+        : true;
     return this.microserviceService.sendWithTimeout(
       this.contentClient,
       QUESTIONS_PATTERNS.GET_BY_ID,
-      { id },
+      { id, increaseView: shouldIncrease },
     );
   }
 

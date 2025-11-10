@@ -66,8 +66,9 @@ export class DoctorsController {
 
   @Public()
   @MessagePattern(DOCTOR_PROFILES_PATTERNS.GET_PUBLIC_LIST)
-  findAll(@Payload() filters?: DoctorProfileQueryDto) {
-    return this.doctorsService.getPublicList(filters);
+  async findAll(@Payload() filters?: DoctorProfileQueryDto) {
+    const result = await this.doctorsService.getPublicList(filters);
+    return result;
   }
 
   @MessagePattern(DOCTOR_PROFILES_PATTERNS.GET_BY_ACCOUNT_ID)

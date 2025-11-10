@@ -7,6 +7,7 @@ export interface BlogResponseDto {
   thumbnailUrl?: string;
   publicIds?: string[];
   authorId: string;
+  viewCount?: number;
   categoryId?: string;
   category?: {
     id: string;

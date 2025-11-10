@@ -7,6 +7,9 @@ export interface QuestionResponseDto {
   specialtyId?: string;
   publicIds?: string[];
   status: string;
+  viewCount?: number;
+  answersCount?: number;
+  acceptedAnswersCount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
