@@ -114,10 +114,16 @@ export class BlogsService {
     return blog;
   }
 
-  async getPublishedBlog(slug: string): Promise<BlogResponseDto> {
+  async getPublishedBlog(
+    slug: string,
+    increaseView?: boolean,
+  ): Promise<BlogResponseDto> {
     const blog = await this.blogRepository.findPublishedBlog(slug);
     if (!blog) {
       throw new NotFoundError('Blog not found');
+    }
+    if (increaseView !== false) {
+      await this.blogRepository.incrementBlogViewCountBySlug(slug);
     }
     return blog;
   }

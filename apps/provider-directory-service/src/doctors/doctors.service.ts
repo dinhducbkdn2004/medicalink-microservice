@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DoctorRepository } from './doctor.repository';
 import {
   CreateDoctorProfileDto,
@@ -9,10 +9,11 @@ import {
   DoctorProfileResponseDto,
 } from '@app/contracts';
 import { NotFoundError } from '@app/domain-errors';
-import { RabbitMQService } from '@app/rabbitmq';
 import { extractPublicIdFromUrl } from '@app/commons/utils';
 import { ASSETS_PATTERNS } from '@app/contracts/patterns';
 import { DoctorCacheInvalidationService } from '../cache/doctor-cache-invalidation.service';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom, timeout } from 'rxjs';
 
 @Injectable()
 export class DoctorsService {
@@ -20,8 +21,9 @@ export class DoctorsService {
 
   constructor(
     private readonly doctorRepo: DoctorRepository,
-    private readonly rabbitMQService: RabbitMQService,
     private readonly doctorCacheInvalidation: DoctorCacheInvalidationService,
+    @Inject('CONTENT_SERVICE')
+    private readonly contentClient: ClientProxy,
   ) {}
 
   async create(
@@ -136,15 +138,10 @@ export class DoctorsService {
       result.staffAccountId,
     );
 
-    // Minimal asset reconcile via content-service
-    try {
-      await this.rabbitMQService.sendMessage<void>(
-        ASSETS_PATTERNS.RECONCILE_ENTITY,
-        { prevPublicIds: prevAssets, nextPublicIds: nextAssets },
-      );
-    } catch (_) {
-      // skip errors to avoid impacting main flow
-    }
+    await this.safeContentCall<void>(ASSETS_PATTERNS.RECONCILE_ENTITY, {
+      prevPublicIds: prevAssets,
+      nextPublicIds: nextAssets,
+    });
 
     return result;
   }
@@ -184,15 +181,10 @@ export class DoctorsService {
       existing.staffAccountId,
     );
 
-    // Minimal orphan cleanup via content-service
-    try {
-      await this.rabbitMQService.sendMessage<{
-        deletedDb: number;
-        requested: number;
-      }>(ASSETS_PATTERNS.CLEANUP_ORPHANED, { publicIds: assetPublicIds });
-    } catch (_) {
-      // skip
-    }
+    await this.safeContentCall<{ deletedDb: number; requested: number }>(
+      ASSETS_PATTERNS.CLEANUP_ORPHANED,
+      { publicIds: assetPublicIds },
+    );
 
     return result;
   }
@@ -285,5 +277,23 @@ export class DoctorsService {
     }
 
     return publicIds;
+  }
+
+  private async safeContentCall<T>(
+    pattern: string,
+    payload: any,
+  ): Promise<T | void> {
+    try {
+      return await firstValueFrom(
+        this.contentClient.send<T>(pattern, payload).pipe(timeout(8000)),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Content RPC ${pattern} failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return;
+    }
   }
 }

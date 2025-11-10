@@ -8,10 +8,11 @@ import { RedisService } from '@app/redis';
 export class DoctorCacheInvalidationService {
   private readonly logger = new Logger(DoctorCacheInvalidationService.name);
 
-  private readonly doctorCompositePrefix = 'doctor:composite:';
-  private readonly doctorCompositeListPrefix = 'doctor:composite:list:';
-  private readonly doctorListPrefix = 'doctor:list';
-  private readonly doctorSearchPrefix = 'doctor:search';
+  private readonly orchestratorNamespace = 'orchestrator:';
+  private readonly doctorCompositePrefix = `${this.orchestratorNamespace}doctor:composite:`;
+  private readonly doctorCompositeListPrefix = `${this.orchestratorNamespace}doctor:composite:list:`;
+  private readonly doctorListPrefix = `${this.orchestratorNamespace}doctor:list`;
+  private readonly doctorSearchPrefix = `${this.orchestratorNamespace}doctor:search`;
 
   constructor(private readonly redisService: RedisService) {}
 

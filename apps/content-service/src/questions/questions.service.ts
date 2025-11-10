@@ -48,10 +48,16 @@ export class QuestionsService {
     };
   }
 
-  async getQuestionById(id: string): Promise<QuestionResponseDto> {
+  async getQuestionById(
+    id: string,
+    increaseView?: boolean,
+  ): Promise<QuestionResponseDto> {
     const question = await this.questionRepository.findQuestionById(id);
     if (!question) {
       throw new NotFoundError('Question not found');
+    }
+    if (increaseView !== false) {
+      await this.questionRepository.incrementViewCount(id);
     }
     return question;
   }

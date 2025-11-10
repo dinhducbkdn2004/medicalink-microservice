@@ -31,8 +31,13 @@ export class BlogsController {
   }
 
   @MessagePattern(BLOGS_PATTERNS.GET_PUBLISHED)
-  async getPublishedBlog(@Payload() payload: { slug: string }) {
-    return this.blogsService.getPublishedBlog(payload.slug);
+  async getPublishedBlog(
+    @Payload() payload: { slug: string; increaseView?: boolean },
+  ) {
+    return this.blogsService.getPublishedBlog(
+      payload.slug,
+      payload.increaseView,
+    );
   }
 
   @MessagePattern(BLOGS_PATTERNS.GET_BY_ID)

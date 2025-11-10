@@ -42,14 +42,47 @@ export class QuestionRepository {
     authorEmail?: string;
     specialtyId?: string;
     status?: QuestionStatus;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }) {
-    const { page, limit, authorEmail, specialtyId, status } = params;
+    const {
+      page,
+      limit,
+      authorEmail,
+      specialtyId,
+      status,
+      search,
+      sortBy,
+      sortOrder,
+    } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {};
     if (authorEmail) where.authorEmail = authorEmail;
     if (specialtyId) where.specialtyId = specialtyId;
     if (status) where.status = status;
+    if (search && typeof search === 'string' && search.trim().length > 0) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { body: { contains: search, mode: 'insensitive' } },
+        { authorName: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Whitelist sort fields to avoid SQL injection via Prisma keys
+    const allowedSortFields = new Set<string>([
+      'createdAt',
+      'updatedAt',
+      'viewCount',
+      'title',
+      'status',
+    ]);
+    const resolvedSortBy = allowedSortFields.has(String(sortBy || ''))
+      ? (sortBy as string)
+      : 'createdAt';
+    const resolvedSortOrder: 'asc' | 'desc' =
+      sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc';
 
     const [questions, total] = await Promise.all([
       this.prisma.question.findMany({
@@ -57,22 +90,41 @@ export class QuestionRepository {
         skip,
         take: limit,
         orderBy: {
-          createdAt: 'desc',
-        },
+          [resolvedSortBy]: resolvedSortOrder,
+        } as any,
       }),
       this.prisma.question.count({ where }),
     ]);
 
-    const dataWithAssets = await Promise.all(
-      questions.map(async (question) => ({
-        question,
-        publicIds: await this.getPublicIdsForEntity('QUESTION', question.id),
-      })),
+    const dataWithExtras = await Promise.all(
+      questions.map(async (question) => {
+        const [publicIds, answersCount, acceptedAnswersCount] =
+          await Promise.all([
+            this.getPublicIdsForEntity('QUESTION', question.id),
+            this.prisma.answer.count({ where: { questionId: question.id } }),
+            this.prisma.answer.count({
+              where: { questionId: question.id, isAccepted: true },
+            }),
+          ]);
+        return {
+          question,
+          publicIds,
+          answersCount,
+          acceptedAnswersCount,
+        };
+      }),
     );
 
     return {
-      data: dataWithAssets.map(({ question, publicIds }) =>
-        this.transformQuestionResponse(question, publicIds, true),
+      data: dataWithExtras.map(
+        ({ question, publicIds, answersCount, acceptedAnswersCount }) =>
+          this.transformQuestionResponse(
+            question,
+            publicIds,
+            true,
+            answersCount,
+            acceptedAnswersCount,
+          ),
       ),
       total,
       page,
@@ -107,9 +159,21 @@ export class QuestionRepository {
     });
 
     if (!question) return null;
-    const publicIds = await this.getPublicIdsForEntity('QUESTION', question.id);
+    const [publicIds, answersCount, acceptedAnswersCount] = await Promise.all([
+      this.getPublicIdsForEntity('QUESTION', question.id),
+      this.prisma.answer.count({ where: { questionId: question.id } }),
+      this.prisma.answer.count({
+        where: { questionId: question.id, isAccepted: true },
+      }),
+    ]);
 
-    return this.transformQuestionResponse(question, publicIds);
+    return this.transformQuestionResponse(
+      question,
+      publicIds,
+      false,
+      answersCount,
+      acceptedAnswersCount,
+    );
   }
 
   async deleteQuestion(id: string): Promise<void> {
@@ -121,9 +185,12 @@ export class QuestionRepository {
     });
   }
 
-  async incrementViewCount(_id: string): Promise<void> {
-    // viewCount is not persistently tracked in schema; no operation performed
-    await Promise.resolve();
+  async incrementViewCount(id: string): Promise<void> {
+    await this.prisma.question.update({
+      where: { id },
+      data: { viewCount: { increment: 1 } } as unknown as any,
+      select: { id: true },
+    });
   }
 
   async updateAnsweredStatus(id: string, status: string): Promise<void> {
@@ -264,6 +331,8 @@ export class QuestionRepository {
     question: any,
     publicIds?: string[],
     simplifyBody: boolean = false,
+    answersCount?: number,
+    acceptedAnswersCount?: number,
   ): QuestionResponseDto {
     const body = simplifyBody
       ? // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -281,6 +350,9 @@ export class QuestionRepository {
       specialtyId: question.specialtyId,
       publicIds,
       status: question.status,
+      viewCount: question.viewCount,
+      answersCount,
+      acceptedAnswersCount,
       createdAt: question.createdAt,
       updatedAt: question.updatedAt,
     };

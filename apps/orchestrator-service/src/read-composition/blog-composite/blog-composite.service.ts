@@ -97,11 +97,18 @@ export class BlogCompositeService extends BaseCompositeService<
    */
   async getPublishedBySlug(
     slug: string,
-    options?: { skipCache?: boolean; cacheTtl?: number },
+    options?: {
+      skipCache?: boolean;
+      cacheTtl?: number;
+      increaseView?: boolean;
+    },
   ): Promise<CompositeResult<BlogCompositeData>> {
     const cacheKey = `slug:${slug}`;
 
-    if (!options?.skipCache) {
+    // If increase view is requested, skip cache to ensure increment path
+    const shouldSkipCache =
+      options?.skipCache || options?.increaseView === true;
+    if (!shouldSkipCache) {
       const cached = await this.cacheService.get<
         CompositeResult<BlogCompositeData>
       >(cacheKey, this.cachePrefix);
@@ -119,7 +126,7 @@ export class BlogCompositeService extends BaseCompositeService<
     const blogData = await this.clientHelper.send(
       this.contentClient,
       BLOGS_PATTERNS.GET_PUBLISHED,
-      { slug },
+      { slug, increaseView: options?.increaseView },
       { timeoutMs: 5000 },
     );
 
@@ -140,11 +147,13 @@ export class BlogCompositeService extends BaseCompositeService<
     };
 
     // Cache the result
-    await this.cacheService.set(
-      cacheKey,
-      result,
-      options?.cacheTtl || this.defaultCacheTtl,
-    );
+    if (!options?.increaseView) {
+      await this.cacheService.set(
+        cacheKey,
+        result,
+        options?.cacheTtl || this.defaultCacheTtl,
+      );
+    }
 
     return result;
   }

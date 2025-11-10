@@ -7,6 +7,7 @@ import { WorkLocationsModule } from './work-locations/work-locations.module';
 import { OfficeHoursModule } from './office-hours/office-hours.module';
 import { HealthController } from './health/health.controller';
 import { RabbitMQModule } from '@app/rabbitmq';
+import { MicroserviceClientsModule } from './clients/microservice-clients.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { RabbitMQModule } from '@app/rabbitmq';
       isGlobal: true,
     }),
     RabbitMQModule,
+    MicroserviceClientsModule,
     PrismaModule,
     SpecialtiesModule,
     WorkLocationsModule,

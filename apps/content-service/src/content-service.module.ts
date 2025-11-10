@@ -7,6 +7,7 @@ import { AssetsModule } from './assets/assets.module';
 import { HealthController } from './health/health.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RabbitMQModule } from '@app/rabbitmq';
+import { MicroserviceClientsModule } from './clients/microservice-clients.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { RabbitMQModule } from '@app/rabbitmq';
       isGlobal: true,
     }),
     RabbitMQModule,
+    MicroserviceClientsModule,
     PrismaModule,
     BlogsModule,
     QuestionsModule,

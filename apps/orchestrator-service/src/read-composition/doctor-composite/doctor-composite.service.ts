@@ -7,6 +7,7 @@ import { CACHE_PREFIXES, CACHE_TTL } from '../../common/constants';
 import {
   DOCTOR_ACCOUNTS_PATTERNS,
   DOCTOR_PROFILES_PATTERNS,
+  STAFFS_PATTERNS,
 } from '@app/contracts';
 import {
   DoctorCompositeQueryDto,
@@ -86,6 +87,73 @@ export class DoctorCompositeService extends BaseCompositeService<
   ): Promise<DoctorCompositeListResultDto> {
     const cacheKey = this.buildListCacheKey(query);
 
+    const hasProfileFilters =
+      typeof query.specialtyIds === 'string' ||
+      typeof query.workLocationIds === 'string' ||
+      query.isActive !== undefined;
+    console.log('hasProfileFilters', hasProfileFilters);
+
+    if (hasProfileFilters) {
+      const rawResult = await this.searchCompositeWithCache<
+        DoctorProfileData,
+        IStaffAccount
+      >(
+        query,
+        {
+          primaryFetch: {
+            client: this.providerClient,
+            pattern: DOCTOR_PROFILES_PATTERNS.GET_PUBLIC_LIST,
+            payload: {
+              page: query.page || 1,
+              limit: query.limit || 10,
+              specialtyIds: query.specialtyIds,
+              workLocationIds: query.workLocationIds,
+            },
+            timeoutMs: 12000,
+            serviceName: 'provider-directory-service',
+          },
+          secondaryFetch: (profiles: DoctorProfileData[]) => ({
+            client: this.accountsClient,
+            pattern: STAFFS_PATTERNS.FIND_BY_IDS,
+            payload: {
+              staffIds: profiles.map((p) => p.staffAccountId),
+            },
+            timeoutMs: 10000,
+            serviceName: 'accounts-service',
+          }),
+          cacheKey,
+          cacheTtl: CACHE_TTL.SHORT,
+          skipCache: query.skipCache,
+          extractIds: (profiles) => profiles.map((p) => p.staffAccountId),
+          extractMeta: (primaryResult) => primaryResult.meta,
+        },
+        (profile: DoctorProfileData, accounts: IStaffAccount[]) => {
+          const account = accounts.find((a) => a.id === profile.staffAccountId);
+          if (!account) {
+            this.logger.warn(
+              `No account found for profile ${profile.id}, skipping`,
+            );
+            return null;
+          }
+          return this.mergeData(account, profile);
+        },
+      );
+
+      console.log('raw result', rawResult);
+
+      // Sanitize for public endpoint: remove sensitive fields
+      const sanitizedResult: DoctorCompositeListResultDto = {
+        ...rawResult,
+        data: rawResult.data.map((item) => this.sanitizePublicComposite(item)),
+      };
+
+      // Overwrite cache with sanitized result to ensure future hits are safe
+      await this.cacheService.set(cacheKey, sanitizedResult, CACHE_TTL.SHORT);
+
+      return sanitizedResult;
+    }
+
+    // Default path: account-first (no profile filters -> correct pagination from accounts)
     const rawResult = await this.searchCompositeWithCache<
       IStaffAccount,
       DoctorProfileData

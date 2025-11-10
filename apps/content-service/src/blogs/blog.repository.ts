@@ -182,6 +182,14 @@ export class BlogRepository {
     return this.transformBlogResponse(blog, publicIds);
   }
 
+  async incrementBlogViewCountBySlug(slug: string): Promise<void> {
+    await this.prisma.blog.update({
+      where: { slug },
+      data: { viewCount: { increment: 1 } },
+      select: { id: true },
+    });
+  }
+
   async updateBlog(id: string, data: UpdateBlogDto): Promise<BlogResponseDto> {
     const updateData: any = {};
     if (data.title) {
@@ -333,6 +341,7 @@ export class BlogRepository {
       content: blog.content,
       thumbnailUrl: blog.thumbnailUrl,
       authorId: blog.authorId,
+      viewCount: blog.viewCount,
       category: blog.category
         ? {
             id: blog.category.id,

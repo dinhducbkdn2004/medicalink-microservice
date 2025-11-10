@@ -1,32 +1,25 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ReviewRepository } from './review.repository';
 import { CreateReviewDto, ReviewResponseDto } from '@app/contracts';
 import { AssetsMaintenanceService } from '../assets/assets-maintenance.service';
 import { NotFoundError } from '@app/domain-errors';
-import { RabbitMQService } from '@app/rabbitmq';
 import { DOCTOR_PROFILES_PATTERNS } from '@app/contracts/patterns';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom, timeout } from 'rxjs';
 
 @Injectable()
 export class ReviewsService {
   constructor(
     private readonly reviewRepository: ReviewRepository,
     private readonly assetsMaintenance: AssetsMaintenanceService,
-    private readonly rabbitMQService: RabbitMQService,
+    @Inject('PROVIDER_DIRECTORY_SERVICE')
+    private readonly providerDirectoryClient: ClientProxy,
   ) {}
 
   async createReview(
     createReviewDto: CreateReviewDto,
   ): Promise<ReviewResponseDto> {
-    // Validate doctor exists in provider-directory
-    try {
-      await this.rabbitMQService.sendMessage(
-        DOCTOR_PROFILES_PATTERNS.FIND_ONE,
-        String(createReviewDto.doctorId),
-        { timeout: 8000 },
-      );
-    } catch (_error) {
-      throw new NotFoundError('Doctor not found');
-    }
+    await this.ensureDoctorExists(String(createReviewDto.doctorId));
 
     return this.reviewRepository.createReview(createReviewDto);
   }
@@ -53,16 +46,7 @@ export class ReviewsService {
     limit: number;
     doctorId: string;
   }) {
-    // Validate doctor exists before fetching
-    try {
-      await this.rabbitMQService.sendMessage(
-        DOCTOR_PROFILES_PATTERNS.FIND_ONE,
-        String(params.doctorId),
-        { timeout: 8000 },
-      );
-    } catch (_error) {
-      throw new NotFoundError('Doctor not found');
-    }
+    await this.ensureDoctorExists(String(params.doctorId));
     const result = await this.reviewRepository.findReviewsByDoctorId(params);
     const hasNext = params.page * params.limit < result.total;
     const hasPrev = params.page > 1;
@@ -97,5 +81,17 @@ export class ReviewsService {
     await this.assetsMaintenance.cleanupEntityAssets(publicIds);
 
     await this.reviewRepository.deleteReview(id);
+  }
+
+  private async ensureDoctorExists(doctorId: string): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.providerDirectoryClient
+          .send(DOCTOR_PROFILES_PATTERNS.FIND_ONE, doctorId)
+          .pipe(timeout(8000)),
+      );
+    } catch (_error) {
+      throw new NotFoundError('Doctor not found');
+    }
   }
 }

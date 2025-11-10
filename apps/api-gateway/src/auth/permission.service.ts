@@ -1,13 +1,23 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { RedisService } from '@app/redis';
-import { JwtPayloadDto, PERMISSION_PATTERNS } from '@app/contracts';
+import {
+  JwtPayloadDto,
+  PERMISSION_PATTERNS,
+  DOCTOR_PROFILES_PATTERNS,
+  BLOGS_PATTERNS,
+  ANSWERS_PATTERNS,
+} from '@app/contracts';
+import { MicroserviceService } from '../utils/microservice.service';
 
 export interface PermissionContext {
   userId?: string;
   doctorId?: string;
   locationId?: string;
   appointmentId?: string;
+  resourceId?: string;
+  targetUserId?: string;
+  answerId?: string;
   [key: string]: any;
 }
 
@@ -24,6 +34,8 @@ export class PermissionService {
   private readonly logger = new Logger(PermissionService.name);
   private readonly CACHE_TTL = 300; // 5 minutes
   private readonly CACHE_KEY_PREFIX = 'permissions:';
+  private readonly OWNERSHIP_CACHE_PREFIX = 'ownership:';
+  private readonly OWNERSHIP_CACHE_TTL = 30; // seconds
 
   // Define action hierarchy - manage and admin are universal permissions
   private readonly universalActions = ['manage', 'admin'];
@@ -33,6 +45,10 @@ export class PermissionService {
 
   constructor(
     @Inject('ACCOUNTS_SERVICE') private readonly accountsClient: ClientProxy,
+    @Inject('PROVIDER_DIRECTORY_SERVICE')
+    private readonly providerDirectoryClient: ClientProxy,
+    @Inject('CONTENT_SERVICE') private readonly contentClient: ClientProxy,
+    private readonly microserviceService: MicroserviceService,
     private readonly redisService: RedisService,
   ) {}
 
@@ -47,7 +63,9 @@ export class PermissionService {
       const permissionSnapshot = await this.getPermissionSnapshot(user);
 
       if (!permissionSnapshot) {
-        this.logger.warn(`No permission snapshot found for user ${user.sub}`);
+        this.logger.warn(
+          `No permission snapshot found for user ${user.sub} (tenant=${user.tenant}, ver=${user.ver})`,
+        );
         return false;
       }
 
@@ -86,20 +104,34 @@ export class PermissionService {
 
       if (!hasBasicPermission) {
         this.logger.debug(
-          `User ${user.email} does not have permission ${permissionKey}`,
+          `Permission miss for ${user.email}: ${permissionKey}`,
+        );
+        this.logger.debug(
+          `Snapshot perms size=${permissionSnapshot.permissions.size} example=[${Array.from(
+            permissionSnapshot.permissions,
+          )
+            .slice(0, 10)
+            .join(', ')}]`,
         );
         return false;
       }
 
+      const normalizedContext = await this.normalizePermissionContext(
+        user,
+        resource,
+        action,
+        context,
+      );
+
       // For context-based permissions, we need to check with the database
       // as conditions are not cached in the snapshot
-      if (context && Object.keys(context).length > 0) {
+      if (normalizedContext && Object.keys(normalizedContext).length > 0) {
         return this.checkPermissionWithContext(
           user.sub,
           resource,
           action,
           user.tenant,
-          context,
+          normalizedContext,
         );
       }
 
@@ -199,12 +231,20 @@ export class PermissionService {
     user: JwtPayloadDto,
   ): Promise<CachedPermissionSnapshot | null> {
     try {
-      const result = await this.accountsClient
-        .send(PERMISSION_PATTERNS.GET_USER_PERMISSION_SNAPSHOT, {
+      const result = await this.microserviceService.sendWithTimeout<{
+        userId: string;
+        tenant: string;
+        version: number;
+        permissions: string[];
+      }>(
+        this.accountsClient,
+        PERMISSION_PATTERNS.GET_USER_PERMISSION_SNAPSHOT,
+        {
           userId: user.sub,
           tenantId: user.tenant,
-        })
-        .toPromise();
+        },
+        { timeoutMs: 8000 },
+      );
 
       if (!result) {
         return null;
@@ -214,7 +254,7 @@ export class PermissionService {
         userId: result.userId,
         tenant: result.tenant,
         version: result.version,
-        permissions: new Set(result.permissions as string[]),
+        permissions: new Set(result.permissions),
         cachedAt: Date.now(),
       };
     } catch (error) {
@@ -231,20 +271,237 @@ export class PermissionService {
     context: PermissionContext,
   ): Promise<boolean> {
     try {
-      const result = await this.accountsClient
-        .send(PERMISSION_PATTERNS.HAS_PERMISSION, {
+      const result = await this.microserviceService.sendWithTimeout<boolean>(
+        this.accountsClient,
+        PERMISSION_PATTERNS.HAS_PERMISSION,
+        {
           userId,
           resource,
           action,
           tenantId: tenant,
           context,
-        })
-        .toPromise();
+        },
+        { timeoutMs: 8000 },
+      );
 
       return result || false;
     } catch (error) {
       this.logger.error('Error checking permission with context:', error);
       return false;
+    }
+  }
+
+  private async normalizePermissionContext(
+    user: JwtPayloadDto,
+    resource: string,
+    action: string,
+    context?: PermissionContext,
+  ): Promise<PermissionContext | undefined> {
+    if (!context) {
+      return context;
+    }
+
+    const baseContext: PermissionContext = {
+      ...context,
+    };
+
+    if (baseContext.isSelf === true) {
+      const hasConcreteResource = typeof baseContext.resourceId === 'string';
+      const matchesTargetUser =
+        baseContext.targetUserId && baseContext.targetUserId === user.sub;
+      if (!hasConcreteResource || matchesTargetUser) {
+        return baseContext;
+      }
+      // else: fall through to recompute
+      delete (baseContext as any).isSelf;
+    }
+
+    try {
+      // Short-circuit if targetUserId already matches current user
+      if (baseContext.targetUserId && baseContext.targetUserId === user.sub) {
+        return { ...baseContext, isSelf: true };
+      }
+
+      let isSelf: boolean | undefined;
+
+      switch (resource) {
+        case 'doctors':
+          isSelf = await this.checkDoctorOwnership(user.sub, baseContext);
+          break;
+        case 'blogs':
+          isSelf = await this.checkBlogOwnership(user.sub, baseContext);
+          break;
+        case 'answers':
+          isSelf = await this.checkAnswerOwnership(user.sub, baseContext);
+          break;
+        default:
+          // fall back to context userId if available
+          if (baseContext.userId && baseContext.userId === user.sub) {
+            isSelf = true;
+          }
+          break;
+      }
+
+      if (isSelf) {
+        return { ...baseContext, isSelf: true };
+      }
+
+      return baseContext;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to normalize permission context for resource ${resource}:${action}: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+      return baseContext;
+    }
+  }
+
+  private async checkDoctorOwnership(
+    userId: string,
+    context: PermissionContext,
+  ): Promise<boolean | undefined> {
+    const doctorId = context.doctorId || context.resourceId;
+    if (!doctorId) {
+      return undefined;
+    }
+
+    try {
+      const cachedOwner = await this.getCachedOwnerId('doctors', doctorId);
+      let ownerId: string | undefined = cachedOwner || undefined;
+
+      if (!ownerId) {
+        const doctor = await this.microserviceService.sendWithTimeout<{
+          staffAccountId?: string;
+        }>(
+          this.providerDirectoryClient,
+          DOCTOR_PROFILES_PATTERNS.FIND_ONE,
+          doctorId,
+          { timeoutMs: 5000 },
+        );
+        ownerId = doctor?.staffAccountId;
+        if (ownerId) {
+          await this.cacheOwnerId('doctors', doctorId, ownerId);
+        }
+      }
+
+      return typeof ownerId === 'string' && ownerId === userId;
+    } catch (error) {
+      this.logger.warn(
+        `Unable to resolve doctor ownership for doctor ${doctorId}: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+      return undefined;
+    }
+  }
+
+  private async checkBlogOwnership(
+    userId: string,
+    context: PermissionContext,
+  ): Promise<boolean | undefined> {
+    const blogId = context.resourceId;
+    if (!blogId) {
+      return undefined;
+    }
+
+    try {
+      const cachedOwner = await this.getCachedOwnerId('blogs', blogId);
+      let ownerId: string | undefined = cachedOwner || undefined;
+
+      if (!ownerId) {
+        const blog = await this.microserviceService.sendWithTimeout<{
+          authorId?: string;
+        }>(
+          this.contentClient,
+          BLOGS_PATTERNS.GET_BY_ID,
+          { id: blogId },
+          { timeoutMs: 5000 },
+        );
+        ownerId = blog?.authorId;
+        if (ownerId) {
+          await this.cacheOwnerId('blogs', blogId, ownerId);
+        }
+      }
+
+      return typeof ownerId === 'string' && ownerId === userId;
+    } catch (error) {
+      this.logger.warn(
+        `Unable to resolve blog ownership for blog ${blogId}: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+      return undefined;
+    }
+  }
+
+  private async checkAnswerOwnership(
+    userId: string,
+    context: PermissionContext,
+  ): Promise<boolean | undefined> {
+    const answerId = context.resourceId || context.answerId;
+    if (!answerId) {
+      return undefined;
+    }
+
+    try {
+      const cachedOwner = await this.getCachedOwnerId('answers', answerId);
+      let ownerId: string | undefined = cachedOwner || undefined;
+
+      if (!ownerId) {
+        const answer = await this.microserviceService.sendWithTimeout<{
+          authorId?: string;
+        }>(
+          this.contentClient,
+          ANSWERS_PATTERNS.GET_BY_ID,
+          { id: answerId },
+          { timeoutMs: 5000 },
+        );
+        ownerId = answer?.authorId;
+        if (ownerId) {
+          await this.cacheOwnerId('answers', answerId, ownerId);
+        }
+      }
+
+      return typeof ownerId === 'string' && ownerId === userId;
+    } catch (error) {
+      this.logger.warn(
+        `Unable to resolve answer ownership for answer ${answerId}: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+      return undefined;
+    }
+  }
+
+  private getOwnershipCacheKey(resource: string, id: string): string {
+    return `${this.OWNERSHIP_CACHE_PREFIX}${resource}:${id}`;
+  }
+
+  private async getCachedOwnerId(
+    resource: string,
+    id: string,
+  ): Promise<string | null> {
+    try {
+      const key = this.getOwnershipCacheKey(resource, id);
+      const value = await this.redisService.get(key);
+      if (!value) return null;
+      return value;
+    } catch {
+      return null;
+    }
+  }
+
+  private async cacheOwnerId(
+    resource: string,
+    id: string,
+    ownerId: string,
+  ): Promise<void> {
+    try {
+      const key = this.getOwnershipCacheKey(resource, id);
+      await this.redisService.set(key, ownerId, this.OWNERSHIP_CACHE_TTL);
+    } catch {
+      // ignore cache errors
     }
   }
 
