@@ -54,6 +54,7 @@ export const EVENT_TYPES = {
   EMAIL_SENT: 'email.sent',
   SMS_SENT: 'sms.sent',
   PUSH_SENT: 'push.sent',
+  NOTIFICATION_EMAIL_SEND: 'notification.email.send',
 } as const;
 
 // Queue Names
