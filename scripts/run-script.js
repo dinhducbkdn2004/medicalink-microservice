@@ -138,9 +138,13 @@ try {
     command = `cd "${workingDir}" && npx ts-node --project tsconfig.json -r tsconfig-paths/register scripts/${fileName}.ts`;
   }
 
+  // Preserve environment variables (including DOTENV_CONFIG_PATH)
+  const env = { ...process.env };
+
   execSync(command, {
     stdio: 'inherit',
     cwd: workingDir,
+    env: env,
   });
 
   console.log('');
