@@ -1,0 +1,31 @@
+<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-text font-family="Inter, Arial, sans-serif" font-size="14px" color="#111827"></mj-text>
+      <mj-section padding="0"></mj-section>
+      <mj-column padding="0"></mj-column>
+    </mj-attributes>
+    <mj-title>{{subject}}</mj-title>
+  </mj-head>
+  <mj-body background-color="#F9FAFB">
+    <mj-section padding="24px 0">
+      <mj-column>
+        <mj-text align="center" font-weight="600">Medicalink</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#FFFFFF" padding="24px" border-radius="8px">
+      <mj-column>
+        {{> header }}
+        {{{ body }}}
+        {{> footer }}
+      </mj-column>
+    </mj-section>
+    <mj-section padding="16px 0">
+      <mj-column>
+        <mj-text align="center" color="#6B7280">© {{year}} Medicalink</mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+
+

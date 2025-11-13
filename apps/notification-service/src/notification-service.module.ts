@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from '../prisma/prisma.module';
-import { NotificationsService } from './notifications/notifications.service';
-import { NotificationsController } from './notifications/notifications.controller';
 import { HealthController } from './health/health.controller';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -11,8 +10,9 @@ import { HealthController } from './health/health.controller';
       isGlobal: true,
     }),
     PrismaModule,
+    EmailModule,
   ],
-  controllers: [NotificationsController, HealthController],
-  providers: [NotificationsService],
+  controllers: [HealthController],
+  providers: [],
 })
 export class NotificationServiceModule {}
