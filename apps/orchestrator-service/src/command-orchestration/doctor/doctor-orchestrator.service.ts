@@ -6,7 +6,12 @@ import {
   DOCTOR_ACCOUNTS_PATTERNS,
   DOCTOR_PROFILES_PATTERNS,
 } from '@app/contracts';
-import { CreateDoctorCommandDto, DoctorCreationResultDto } from './dto';
+import {
+  CreateDoctorCommandDto,
+  DoctorCreationResultDto,
+  DeleteDoctorCommandDto,
+  DoctorDeletionResultDto,
+} from './dto';
 import { IStaffAccount } from '@app/contracts/interfaces';
 import { SagaOrchestrationError } from '../../common/errors';
 
@@ -16,6 +21,13 @@ import { SagaOrchestrationError } from '../../common/errors';
 interface DoctorCreationSagaOutput {
   account: IStaffAccount;
   profile: { id: string };
+}
+
+interface DoctorDeletionSagaState {
+  staffAccountId: string;
+  profile?: { id: string } | null;
+  account?: IStaffAccount | null;
+  profileDeleted?: boolean;
 }
 
 /**
@@ -131,6 +143,131 @@ export class DoctorOrchestratorService {
     return {
       account: result.data!.account,
       profileId: result.data!.profile.id,
+      metadata: result.metadata,
+    };
+  }
+
+  /**
+   * Delete doctor account and profile using saga orchestration
+   * - Step 1: Load profile (optional) to determine profile ID
+   * - Step 2: Soft delete doctor account in accounts-service
+   * - Step 3: Hard delete doctor profile in provider-directory-service
+   */
+  async deleteDoctor(
+    command: DeleteDoctorCommandDto,
+  ): Promise<DoctorDeletionResultDto> {
+    const steps: SagaStep[] = [
+      {
+        name: 'loadProfile',
+        execute: async (input: DoctorDeletionSagaState) => {
+          let profile: { id: string } | null = null;
+          try {
+            profile = await this.clientHelper.send<{ id: string }>(
+              this.providerClient,
+              DOCTOR_PROFILES_PATTERNS.GET_BY_ACCOUNT_ID,
+              { staffAccountId: input.staffAccountId },
+              { timeoutMs: 8000 },
+            );
+          } catch (error) {
+            const isNotFound =
+              error?.statusCode === 404 ||
+              error?.message?.includes('not found');
+
+            if (isNotFound) {
+              this.logger.warn(
+                `Profile not found for staffAccountId ${input.staffAccountId}. Continuing deletion without profile.`,
+              );
+            } else {
+              throw error;
+            }
+          }
+
+          return {
+            ...input,
+            profile,
+            profileDeleted: false,
+          };
+        },
+      },
+      {
+        name: 'softDeleteAccount',
+        execute: async (input: DoctorDeletionSagaState) => {
+          const account = await this.clientHelper.send<IStaffAccount>(
+            this.accountsClient,
+            DOCTOR_ACCOUNTS_PATTERNS.REMOVE,
+            input.staffAccountId,
+            { timeoutMs: 10000 },
+          );
+
+          return {
+            ...input,
+            account,
+          };
+        },
+        compensate: async (output: DoctorDeletionSagaState) => {
+          this.logger.error(
+            `Doctor account ${output.staffAccountId} was soft deleted but a subsequent step failed. Manual restore may be required.`,
+          );
+          return Promise.resolve();
+        },
+      },
+      {
+        name: 'hardDeleteProfile',
+        execute: async (input: DoctorDeletionSagaState) => {
+          if (!input.profile) {
+            return {
+              ...input,
+              profileDeleted: false,
+            };
+          }
+
+          await this.clientHelper.send(
+            this.providerClient,
+            DOCTOR_PROFILES_PATTERNS.REMOVE,
+            { id: input.profile.id },
+            { timeoutMs: 10000 },
+          );
+
+          return {
+            ...input,
+            profileDeleted: true,
+          };
+        },
+      },
+    ];
+
+    const result = await this.sagaOrchestrator.execute<
+      DoctorDeletionSagaState,
+      DoctorDeletionSagaState
+    >(
+      steps,
+      { staffAccountId: command.staffAccountId },
+      {
+        correlationId: command.correlationId,
+        userId: command.userId,
+      },
+    );
+
+    if (!result.success) {
+      throw new SagaOrchestrationError(
+        result.error?.message || 'Doctor deletion failed',
+        {
+          step: result.error?.step,
+          sagaId: result.metadata.sagaId,
+          executedSteps: result.metadata.executedSteps,
+          compensatedSteps: result.metadata.compensatedSteps,
+          durationMs: result.metadata.durationMs,
+          originalError: result.error?.originalError,
+        },
+      );
+    }
+
+    const finalState = result.data!;
+
+    return {
+      account: finalState.account ?? null,
+      profileDeleted: Boolean(finalState.profileDeleted),
+      profileId: finalState.profile?.id,
       metadata: result.metadata,
     };
   }

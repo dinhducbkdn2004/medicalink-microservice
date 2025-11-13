@@ -139,8 +139,6 @@ export class DoctorCompositeService extends BaseCompositeService<
         },
       );
 
-      console.log('raw result', rawResult);
-
       // Sanitize for public endpoint: remove sensitive fields
       const sanitizedResult: DoctorCompositeListResultDto = {
         ...rawResult,

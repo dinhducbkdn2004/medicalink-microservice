@@ -162,7 +162,7 @@ export class PatientRepository extends BaseRepository<
             timeEnd: last.event?.timeEnd ?? null,
           }
         : null;
-      const { Appointment, ...rest } = p;
+      const { Appointment: _Appointment, ...rest } = p;
       return { ...rest, lastAppointment };
     });
 

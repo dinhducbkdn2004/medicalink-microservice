@@ -164,12 +164,19 @@ export class DoctorsController {
 
   @RequireDeletePermission('doctors')
   @Delete(':id')
-  async remove(@Param('id') id: string): Promise<IStaffAccount> {
-    return this.microserviceService.sendWithTimeout<IStaffAccount>(
-      this.accountsClient,
-      DOCTOR_ACCOUNTS_PATTERNS.REMOVE,
-      id,
-      { timeoutMs: 12000 },
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayloadDto,
+  ): Promise<any> {
+    return this.microserviceService.sendWithTimeout(
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.DOCTOR_DELETE,
+      {
+        staffAccountId: id,
+        userId: user.sub,
+        correlationId: `doctor-delete-${Date.now()}`,
+      },
+      { timeoutMs: 20000 },
     );
   }
 }
