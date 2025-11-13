@@ -2,7 +2,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AppointmentCompositeService } from './appointment-composite.service';
 import { ORCHESTRATOR_PATTERNS } from '@app/contracts/patterns';
-import { ListAppointmentsQueryDto } from '@app/contracts/dtos/api-gateway/appointments.dto';
+import { ListAppointmentsQueryDto } from '@app/contracts/dtos/booking';
 
 @Controller()
 export class AppointmentCompositeController {

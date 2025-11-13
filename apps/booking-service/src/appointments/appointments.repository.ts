@@ -2,12 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '@app/repositories';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAppointmentDto, UpdateAppointmentDto } from '@app/contracts';
-import { nowUtc } from '@app/commons/utils';
-import {
-  Appointment,
-  AppointmentStatus,
-  Prisma,
-} from '../../prisma/generated/client';
+import { Appointment, Prisma } from '../../prisma/generated/client';
 
 @Injectable()
 export class AppointmentsRepository extends BaseRepository<
@@ -20,25 +15,13 @@ export class AppointmentsRepository extends BaseRepository<
     super(prisma.appointment);
   }
 
-  async confirm(id: string): Promise<Appointment> {
-    return await this.model.update({
-      where: { id },
-      data: { status: AppointmentStatus.CONFIRMED },
-    });
-  }
-
-  async cancel(
+  async updateAppointmentEntity(
     id: string,
-    cancelledBy: 'PATIENT' | 'STAFF',
-    reason?: string,
+    data: Prisma.AppointmentUpdateInput,
   ): Promise<Appointment> {
-    const status =
-      cancelledBy === 'PATIENT'
-        ? AppointmentStatus.CANCELLED_BY_PATIENT
-        : AppointmentStatus.CANCELLED_BY_STAFF;
     return await this.model.update({
       where: { id },
-      data: { status, reason, cancelledAt: nowUtc() },
+      data,
     });
   }
 }

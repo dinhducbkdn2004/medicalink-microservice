@@ -1,5 +1,5 @@
 import { Type, Transform } from 'class-transformer';
-import { IsOptional, IsString, IsArray, IsBoolean } from 'class-validator';
+import { IsOptional, IsString, IsBoolean } from 'class-validator';
 import { PaginationDto } from '../common';
 
 /**

@@ -8,13 +8,17 @@ import {
   CancelAppointmentDto,
   ConfirmAppointmentDto,
   PaginatedResponse,
+  PostResponseDto,
 } from '@app/contracts/dtos';
 import { Appointment } from '../../prisma/generated/client';
-import { PublicCreateAppointmentFromEventDto } from '@app/contracts/dtos/public-create-appointment-from-event.dto';
+import {
+  PublicCreateAppointmentFromEventDto,
+  ListAppointmentsQueryDto,
+  RescheduleAppointmentDto,
+} from '@app/contracts/dtos/booking';
 import { EventTempDto } from '@app/contracts/dtos/event-temp.dto';
-import { ListAppointmentsQueryDto } from '@app/contracts/dtos/api-gateway/appointments.dto';
 import { ListEventsQueryDto } from './dtos/list-events-query.dto';
-import { RescheduleAppointmentRequestDto } from '@app/contracts/dtos/api-gateway/appointments.dto';
+import { BadRequestError } from '@app/domain-errors';
 
 @Controller()
 export class AppointmentsController {
@@ -22,10 +26,21 @@ export class AppointmentsController {
 
   // Appointment RPC handlers
   @MessagePattern(BOOKING_PATTERNS.CREATE_APPOINTMENT)
-  createAppointment(
+  async createAppointment(
     @Payload() dto: CreateAppointmentDto,
   ): Promise<Appointment> {
-    return this.appointmentsService.createAppointment(dto);
+    try {
+      const appointment = await this.appointmentsService.createAppointment(dto);
+      return appointment;
+    } catch (error) {
+      if (
+        error?.code === 'P2003' &&
+        error?.meta?.constraint === 'appointments_patient_id_fkey'
+      ) {
+        throw new BadRequestError('Patient not exists');
+      }
+      throw error;
+    }
   }
 
   @MessagePattern(BOOKING_PATTERNS.LIST_APPOINTMENTS)
@@ -48,25 +63,50 @@ export class AppointmentsController {
   }
 
   @MessagePattern(BOOKING_PATTERNS.CANCEL_APPOINTMENT)
-  cancelAppointment(
+  async cancelAppointment(
     @Payload() dto: CancelAppointmentDto,
-  ): Promise<Appointment> {
-    return this.appointmentsService.cancelAppointment(dto);
+  ): Promise<PostResponseDto<Appointment>> {
+    const result = await this.appointmentsService.cancelAppointment(dto);
+    return {
+      success: true,
+      message: 'Appointment cancelled successfully',
+      data: result,
+    };
   }
 
   @MessagePattern(BOOKING_PATTERNS.CONFIRM_APPOINTMENT)
-  confirmAppointment(
+  async confirmAppointment(
     @Payload() dto: ConfirmAppointmentDto,
-  ): Promise<Appointment> {
-    return this.appointmentsService.confirmAppointment(dto);
+  ): Promise<PostResponseDto<Appointment>> {
+    const result = await this.appointmentsService.confirmAppointment(dto);
+    return {
+      success: true,
+      message: 'Appointment confirmed successfully',
+      data: result,
+    };
+  }
+
+  @MessagePattern(BOOKING_PATTERNS.COMPLETE_APPOINTMENT)
+  async completeAppointment(
+    @Payload() id: string,
+  ): Promise<PostResponseDto<Appointment>> {
+    const result = await this.appointmentsService.completeAppointment(
+      String(id),
+    );
+    return {
+      success: true,
+      message: 'Appointment completed successfully',
+      data: result,
+    };
   }
 
   @MessagePattern(BOOKING_PATTERNS.RESCHEDULE_APPOINTMENT)
   rescheduleAppointment(
-    @Payload() payload: { id: string } & RescheduleAppointmentRequestDto,
+    @Payload() payload: { id: string } & RescheduleAppointmentDto,
   ): Promise<Appointment> {
     return this.appointmentsService.rescheduleAppointment(payload.id, payload);
   }
+
   @MessagePattern(BOOKING_PATTERNS.CREATE_APPOINTMENT_FROM_EVENT)
   createAppointmentFromEvent(
     @Payload() dto: PublicCreateAppointmentFromEventDto,

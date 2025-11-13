@@ -21,7 +21,7 @@ export function toUtcDate(input: string | Date): Date {
 }
 
 export function combineDateWithTimeUtc(dateStr: string, timeStr: string): Date {
-  const iso = `${dayjs.utc(dateStr).format('YYYY-MM-DD')}T${normalizeTimeString(timeStr)}`;
+  const iso = `${dayjs.utc(dateStr || '1970-01-01').format('YYYY-MM-DD')}T${normalizeTimeString(timeStr)}`;
   const d = dayjs.utc(iso, 'YYYY-MM-DDTHH:mm:ss', true);
   if (!d.isValid()) throw new Error('Invalid time format');
   return d.toDate();

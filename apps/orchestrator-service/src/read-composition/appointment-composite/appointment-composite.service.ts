@@ -6,7 +6,7 @@ import {
   DOCTOR_PROFILES_PATTERNS,
   STAFFS_PATTERNS,
 } from '@app/contracts/patterns';
-import { ListAppointmentsQueryDto } from '@app/contracts/dtos/api-gateway/appointments.dto';
+import { ListAppointmentsQueryDto } from '@app/contracts/dtos/booking';
 import { DoctorProfileResponseDto, PaginatedResponse } from '@app/contracts';
 
 type AppointmentWithDoctor = any & {

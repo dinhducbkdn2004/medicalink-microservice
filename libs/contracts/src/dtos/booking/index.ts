@@ -9,3 +9,6 @@ export * from './commit-schedule-hold.dto';
 export * from './schedule-hold.dto';
 export * from './appointments-filter.dto';
 export * from './schedule-holds-filter.dto';
+export * from './public-create-appointment-from-event.dto';
+export * from './list-appointments-query.dto';
+export * from './reschedule-appointment.dto';

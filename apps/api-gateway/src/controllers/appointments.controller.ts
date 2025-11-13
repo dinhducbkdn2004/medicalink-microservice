@@ -17,22 +17,20 @@ import {
   RequireReadPermission,
   RequireUpdatePermission,
   RequireCreatePermission,
+  CreateAppointmentDto,
 } from '@app/contracts';
 import {
   UpdateAppointmentDto,
   CancelAppointmentDto,
   ConfirmAppointmentDto,
-} from '@app/contracts';
+  ListAppointmentsQueryDto,
+  RescheduleAppointmentDto,
+  PublicCreateAppointmentFromEventDto,
+} from '@app/contracts/dtos/booking';
 import { BOOKING_PATTERNS } from '@app/contracts/patterns';
 import { ORCHESTRATOR_PATTERNS } from '@app/contracts/patterns';
 import { EventTempDto } from '@app/contracts/dtos/event-temp.dto';
-import { PublicCreateAppointmentFromEventDto } from '@app/contracts/dtos/public-create-appointment-from-event.dto';
-import {
-  CancelAppointmentBodyDto,
-  CreateAppointmentRequestDto,
-  ListAppointmentsQueryDto,
-  RescheduleAppointmentRequestDto,
-} from '@app/contracts/dtos/api-gateway/appointments.dto';
+import { CancelAppointmentBodyDto } from '@app/contracts/dtos/api-gateway/cancel-appointment-body.dto';
 import { PublicCreateThrottle } from '../utils/custom-throttle.decorator';
 
 @Controller('appointments')
@@ -96,12 +94,23 @@ export class AppointmentsController {
 
   @RequireCreatePermission('appointments')
   @Post()
-  async create(@Body() body: CreateAppointmentRequestDto) {
+  async create(@Body() body: CreateAppointmentDto) {
     return this.microserviceService.sendWithTimeout(
       this.bookingClient,
       BOOKING_PATTERNS.CREATE_APPOINTMENT,
       body,
       { timeoutMs: 20000 },
+    );
+  }
+
+  @RequireUpdatePermission('appointments')
+  @Patch(':id/complete')
+  complete(@Param('id') id: string) {
+    return this.microserviceService.sendWithTimeout(
+      this.bookingClient,
+      BOOKING_PATTERNS.COMPLETE_APPOINTMENT,
+      id,
+      { timeoutMs: 8000 },
     );
   }
 
@@ -139,7 +148,7 @@ export class AppointmentsController {
   @Patch(':id/reschedule')
   async reschedule(
     @Param('id') id: string,
-    @Body() body: RescheduleAppointmentRequestDto,
+    @Body() body: RescheduleAppointmentDto,
   ) {
     const payload = { id, ...body };
     return this.microserviceService.sendWithTimeout(
@@ -168,7 +177,7 @@ export class AppointmentsController {
   }
 
   @RequireUpdatePermission('appointments')
-  @Post(':id/confirm')
+  @Patch(':id/confirm')
   confirm(@Param('id') id: string) {
     const payload: ConfirmAppointmentDto = { id };
     return this.microserviceService.sendWithTimeout(

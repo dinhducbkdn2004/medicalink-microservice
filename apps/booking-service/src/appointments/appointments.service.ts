@@ -3,7 +3,12 @@ import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppointmentsRepository } from './appointments.repository';
-import { dayjs, combineDateWithTimeUtc, toUtcDate } from '@app/commons/utils';
+import {
+  dayjs,
+  combineDateWithTimeUtc,
+  toUtcDate,
+  nowUtc,
+} from '@app/commons/utils';
 import {
   CreateAppointmentDto,
   UpdateAppointmentDto,
@@ -20,8 +25,10 @@ import {
   Prisma,
 } from '../../prisma/generated/client';
 import { BadRequestError, NotFoundError } from '@app/domain-errors';
-import { ListAppointmentsQueryDto } from '@app/contracts/dtos/api-gateway/appointments.dto';
-import { RescheduleAppointmentRequestDto } from '@app/contracts/dtos/api-gateway/appointments.dto';
+import {
+  ListAppointmentsQueryDto,
+  RescheduleAppointmentDto,
+} from '@app/contracts/dtos/booking';
 
 @Injectable()
 export class AppointmentsService {
@@ -67,7 +74,9 @@ export class AppointmentsService {
           specialtyId: (dto as any).specialtyId,
           reason: dto.reason ?? undefined,
           notes: dto.notes ?? undefined,
-          status: 'BOOKED',
+          priceAmount: dto.priceAmount ?? 0,
+          currency: dto.currency ?? 'VND',
+          status: AppointmentStatus.BOOKED,
         },
       });
 
@@ -194,6 +203,8 @@ export class AppointmentsService {
             serviceDate: true,
             timeStart: true,
             timeEnd: true,
+            nonBlocking: true,
+            eventType: true,
           },
         },
       },
@@ -227,30 +238,98 @@ export class AppointmentsService {
   }
 
   async updateAppointment(dto: UpdateAppointmentDto): Promise<Appointment> {
-    return await this.appointmentsRepo.update(dto.id, {
-      reason: dto.reason,
-      notes: dto.notes,
-      status: dto.status as any,
-    } as any);
+    const { id, ...rest } = dto;
+
+    return await this.appointmentsRepo.update(id, rest as UpdateAppointmentDto);
   }
 
   async cancelAppointment(dto: CancelAppointmentDto): Promise<Appointment> {
-    const appt = await this.appointmentsRepo.cancel(
+    const appointment = await this.appointmentsRepo.findById(dto.id);
+    if (!appointment) {
+      throw new BadRequestError('Appointment not found');
+    }
+
+    switch (appointment.status) {
+      case AppointmentStatus.COMPLETED:
+        throw new BadRequestError('Appointment already completed');
+      case AppointmentStatus.CANCELLED_BY_PATIENT:
+        throw new BadRequestError('Appointment already cancelled by patient');
+      case AppointmentStatus.CANCELLED_BY_STAFF:
+        throw new BadRequestError('Appointment already cancelled by staff');
+    }
+
+    const cancelledBy: 'PATIENT' | 'STAFF' = dto.cancelledBy ?? 'PATIENT';
+    const status =
+      cancelledBy === 'PATIENT'
+        ? AppointmentStatus.CANCELLED_BY_PATIENT
+        : AppointmentStatus.CANCELLED_BY_STAFF;
+    const cancelNote = `
+      <br/>
+      <p><b>Appointment cancelled by ${cancelledBy.toLowerCase()}</b></p>
+      <p><b>Reason: </b>${dto.reason || 'No reason provided'}</p>
+    `;
+
+    const updated = await this.appointmentsRepo.updateAppointmentEntity(
       dto.id,
-      (dto.cancelledBy || 'PATIENT') as any,
-      dto.reason,
+      {
+        status,
+        notes: appointment.notes ? appointment.notes + cancelNote : cancelNote,
+        cancelledAt: nowUtc(),
+      },
     );
-    return appt;
+
+    await this.prisma.event.update({
+      where: { id: appointment.eventId },
+      data: { nonBlocking: true },
+    });
+
+    return updated;
   }
 
   async confirmAppointment(dto: ConfirmAppointmentDto): Promise<Appointment> {
-    const appt = await this.appointmentsRepo.confirm(dto.id);
-    return appt;
+    const appointment = await this.appointmentsRepo.findById(dto.id);
+    if (!appointment) {
+      throw new BadRequestError('Appointment not found');
+    }
+
+    switch (appointment.status) {
+      case AppointmentStatus.CONFIRMED:
+        throw new BadRequestError('Appointment already confirmed');
+      case AppointmentStatus.COMPLETED:
+        throw new BadRequestError('Appointment already completed');
+      case AppointmentStatus.CANCELLED_BY_PATIENT:
+        throw new BadRequestError('Appointment already cancelled by patient');
+      case AppointmentStatus.CANCELLED_BY_STAFF:
+        throw new BadRequestError('Appointment already cancelled by staff');
+    }
+
+    return await this.appointmentsRepo.updateAppointmentEntity(dto.id, {
+      status: AppointmentStatus.CONFIRMED,
+    });
+  }
+
+  async completeAppointment(id: string): Promise<Appointment> {
+    const appointment = await this.appointmentsRepo.findById(id);
+    if (!appointment) {
+      throw new NotFoundError('Appointment not found');
+    }
+
+    const updated = await this.appointmentsRepo.updateAppointmentEntity(id, {
+      status: AppointmentStatus.COMPLETED,
+      completedAt: nowUtc(),
+    });
+
+    // set event as non-blocking
+    await this.prisma.event.update({
+      where: { id: appointment.eventId },
+      data: { nonBlocking: true },
+    });
+    return updated;
   }
 
   async rescheduleAppointment(
     id: string,
-    dto: RescheduleAppointmentRequestDto,
+    dto: RescheduleAppointmentDto,
   ): Promise<Appointment> {
     return this.prisma.$transaction(async (tx) => {
       const appt = await tx.appointment.findUnique({
@@ -265,9 +344,30 @@ export class AppointmentsService {
       if (dto.timeEnd) updateEvent.timeEnd = dto.timeEnd;
 
       if (Object.keys(updateEvent).length > 0) {
+        await this.ensureAvailableSlot({
+          doctorId: appt.doctorId,
+          locationId: appt.locationId,
+          serviceDate: updateEvent.serviceDate || appt.event.serviceDate,
+          timeStart: updateEvent.timeStart || appt.event.timeStart,
+          timeEnd: updateEvent.timeEnd || appt.event.timeEnd,
+        });
+
+        const formattedTimeStart = combineDateWithTimeUtc(
+          updateEvent.serviceDate,
+          updateEvent.timeStart,
+        );
+        const formattedTimeEnd = combineDateWithTimeUtc(
+          updateEvent.serviceDate,
+          updateEvent.timeEnd,
+        );
+
         await tx.event.update({
           where: { id: appt.eventId },
-          data: updateEvent,
+          data: {
+            serviceDate: updateEvent.serviceDate,
+            timeStart: formattedTimeStart,
+            timeEnd: formattedTimeEnd,
+          },
         });
       }
 
