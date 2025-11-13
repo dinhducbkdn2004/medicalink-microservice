@@ -27,6 +27,21 @@ const envPath = path.resolve(process.cwd(), envFile);
 console.log(`Loading environment from: ${envPath}`);
 dotenv.config({ path: envPath });
 
+// Replace Docker hostname with localhost when running from host
+// This allows scripts to work with .env files that use Docker service names
+if (process.env.ACCOUNTS_DATABASE_URL?.includes('@postgres:')) {
+  process.env.ACCOUNTS_DATABASE_URL = process.env.ACCOUNTS_DATABASE_URL.replace(
+    '@postgres:',
+    '@localhost:',
+  );
+}
+if (process.env.PROVIDER_DATABASE_URL?.includes('@postgres:')) {
+  process.env.PROVIDER_DATABASE_URL = process.env.PROVIDER_DATABASE_URL.replace(
+    '@postgres:',
+    '@localhost:',
+  );
+}
+
 // Parse command line arguments
 const args = process.argv.slice(2);
 const isExecute = args.includes('--execute');
