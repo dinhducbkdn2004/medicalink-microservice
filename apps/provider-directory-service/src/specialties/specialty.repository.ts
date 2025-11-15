@@ -1,16 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { Specialty, Prisma } from '../../prisma/generated/client';
-import {
-  CreateSpecialtyDto,
-  UpdateSpecialtyDto,
-  SpecialtyQueryDto,
-} from '@app/contracts';
 import {
   createPlaceholderImageUrl,
   IMAGE_PLACEHOLDER_DEFAULT_OPTIONS,
   slugify,
 } from '@app/commons/utils';
+import {
+  CreateSpecialtyDto,
+  SpecialtyQueryDto,
+  UpdateSpecialtyDto,
+} from '@app/contracts';
+import { Injectable } from '@nestjs/common';
+import { Prisma, Specialty } from '../../prisma/generated/client';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class SpecialtyRepository {
@@ -135,6 +135,10 @@ export class SpecialtyRepository {
     }
     if (data.iconUrl !== undefined) {
       updateData.iconUrl = data.iconUrl;
+    }
+
+    if (typeof data.isActive === 'boolean') {
+      updateData.isActive = data.isActive;
     }
 
     return this.prisma.specialty.update({

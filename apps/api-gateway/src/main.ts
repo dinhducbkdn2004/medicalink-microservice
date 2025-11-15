@@ -1,21 +1,23 @@
+import { SafeValidationPipe } from '@app/contracts';
+import { BadRequestException, Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, BadRequestException, Logger } from '@nestjs/common';
-import { ApiGatewayModule } from './api-gateway.module';
-import { ResolvePromisesInterceptor } from './interceptors/serializer.interceptor';
-import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import * as dotenv from 'dotenv';
+import { ApiGatewayModule } from './api-gateway.module';
+import { GlobalExceptionFilter } from './filters/global-exception.filter';
+import { ResolvePromisesInterceptor } from './interceptors/serializer.interceptor';
 
 dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
 
-  // Enable comprehensive validation pipes with detailed error reporting
+  // Enable comprehensive validation pipes with auto-trim and security checks
   app.useGlobalPipes(
-    new ValidationPipe({
+    new SafeValidationPipe({
       transform: true,
       transformOptions: {
         enableImplicitConversion: false,
+        exposeDefaultValues: true,
       },
       whitelist: true,
       forbidNonWhitelisted: true,

@@ -1,4 +1,10 @@
-import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateSpecialtyDto {
   @IsString({ message: 'Name must be a string' })
@@ -12,5 +18,6 @@ export class CreateSpecialtyDto {
 
   @IsOptional()
   @IsString({ message: 'Icon URL must be a string' })
+  @IsUrl({}, { message: 'Icon URL must be a valid URL' })
   iconUrl?: string;
 }

@@ -1,12 +1,12 @@
+import { RpcDomainErrorFilter } from '@app/error-adapters';
+import { QUEUE_NAMES, RabbitMQConfig } from '@app/rabbitmq';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions } from '@nestjs/microservices';
-import { ProviderDirectoryServiceModule } from './provider-directory-service.module';
 import * as dotenv from 'dotenv';
-import { RpcDomainErrorFilter } from '@app/error-adapters';
-import { Logger, ValidationPipe } from '@nestjs/common';
-import { RabbitMQConfig, QUEUE_NAMES } from '@app/rabbitmq';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProviderDirectoryServiceModule } from './provider-directory-service.module';
 
 dotenv.config();
 
@@ -18,6 +18,10 @@ async function bootstrap() {
       whitelist: true, // Strip properties that do not have any decorators
       transform: true, // Transform payloads to be objects typed according to their DTO classes
       forbidNonWhitelisted: true, // Throw errors if non-whitelisted values are provided
+      transformOptions: {
+        enableImplicitConversion: true,
+        exposeDefaultValues: true,
+      },
     }),
   );
 

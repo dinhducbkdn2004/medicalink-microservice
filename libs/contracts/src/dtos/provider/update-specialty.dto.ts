@@ -1,4 +1,11 @@
-import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateSpecialtyDto {
   @IsOptional()
@@ -13,5 +20,10 @@ export class UpdateSpecialtyDto {
 
   @IsOptional()
   @IsString({ message: 'Icon URL must be a string' })
+  @IsUrl({}, { message: 'Icon URL must be a valid URL' })
   iconUrl?: string;
+
+  @IsOptional()
+  @IsBoolean({ message: 'isActive must be a boolean value' })
+  isActive?: boolean;
 }
