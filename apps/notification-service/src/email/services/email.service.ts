@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import Mail from 'nodemailer/lib/mailer';
 import { NodemailerProvider } from './nodemailer.provider';
-import { EmailConfigService } from './email-config.service';
+import { EmailConfigService, SmtpConfig } from './email-config.service';
 import { TemplateRenderer } from './template-renderer.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 
@@ -22,6 +22,8 @@ export interface SendEmailInput {
 
 @Injectable()
 export class EmailService {
+  private readonly logger = new Logger(EmailService.name);
+
   constructor(
     private readonly provider: NodemailerProvider,
     private readonly config: EmailConfigService,
@@ -32,7 +34,16 @@ export class EmailService {
   async sendEmail(
     input: SendEmailInput,
   ): Promise<{ messageId: string | undefined }> {
-    const cfg = this.config.getSmtpConfig();
+    let cfg: SmtpConfig;
+    try {
+      cfg = this.config.getSmtpConfig();
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to load SMTP config: ${error?.message}`,
+        error?.stack,
+      );
+      throw error;
+    }
     const { html, subject: renderedSubject } = await this.renderer.render(
       input.templateKey,
       { ...(input.context ?? {}), subject: input.subject },
@@ -58,15 +69,21 @@ export class EmailService {
         status: 'QUEUED',
       },
     });
-
     try {
       const info = await this.provider.getTransporter().sendMail(mailOptions);
       await this.prisma.emailDelivery.update({
         where: { id: delivery.id },
         data: { status: 'SENT', sentAt: new Date() },
       });
+      this.logger.debug(
+        `Email sent successfully. deliveryId=${delivery.id} messageId=${info?.messageId}`,
+      );
       return { messageId: info?.messageId };
     } catch (error: any) {
+      this.logger.error(
+        `Email send failed. deliveryId=${delivery.id} error=${error?.message}`,
+        error?.stack,
+      );
       await this.prisma.emailDelivery.update({
         where: { id: delivery.id },
         data: {

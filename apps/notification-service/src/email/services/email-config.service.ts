@@ -19,7 +19,7 @@ export class EmailConfigService {
   getSmtpConfig(): SmtpConfig {
     const host = this.config.get<string>('SMTP_HOST', 'smtp.gmail.com');
     const port = Number(this.config.get<string>('SMTP_PORT', '587'));
-    const secure = true;
+    const secure = this.resolveSecureFlag(port);
     const user = this.config.get<string>('SMTP_USER');
     const pass = this.config.get<string>('SMTP_PASS');
     const from =
@@ -41,5 +41,13 @@ export class EmailConfigService {
       rateLimitPerSec,
       maxRetries,
     };
+  }
+
+  private resolveSecureFlag(port: number): boolean {
+    const secureEnv = this.config.get<string>('SMTP_SECURE');
+    if (typeof secureEnv !== 'undefined') {
+      return ['true', '1', 'yes'].includes(secureEnv.toLowerCase());
+    }
+    return port === 465;
   }
 }

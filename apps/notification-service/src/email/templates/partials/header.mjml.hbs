@@ -1,5 +1,15 @@
-<mj-text align="left" font-size="18px" font-weight="600" padding-bottom="12px">
-  {{title}}
+<mj-text
+  align="left"
+  font-size="22px"
+  font-weight="600"
+  color="#0F172A"
+  padding-bottom="12px"
+>
+  {{#if title}}{{title}}{{else}}{{subject}}{{/if}}
 </mj-text>
-
-
+<mj-divider
+  border-color="#1E9DF1"
+  border-width="3px"
+  width="56px"
+  padding="0 0 16px"
+></mj-divider>

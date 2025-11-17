@@ -16,6 +16,16 @@ import { RabbitMQConfig, QUEUE_NAMES } from '@app/rabbitmq';
           ),
         inject: [ConfigService],
       },
+      {
+        name: 'ACCOUNTS_SERVICE',
+        imports: [ConfigModule],
+        useFactory: (configService: ConfigService) =>
+          RabbitMQConfig.createClientConfig(
+            configService,
+            QUEUE_NAMES.ACCOUNTS_QUEUE,
+          ),
+        inject: [ConfigService],
+      },
     ]),
   ],
   exports: [ClientsModule],

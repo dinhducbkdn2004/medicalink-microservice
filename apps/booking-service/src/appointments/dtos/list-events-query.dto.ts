@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, Matches } from 'class-validator';
 
 export class ListEventsQueryDto {
   @IsOptional()
@@ -10,8 +10,11 @@ export class ListEventsQueryDto {
   locationId?: string;
 
   @IsOptional()
-  @IsDateString({}, { message: 'Service date must be a valid date string' })
-  serviceDate?: Date;
+  @IsString({ message: 'Service date must be a string' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/i, {
+    message: 'Service date must be in YYYY-MM-DD format',
+  })
+  serviceDate?: string;
 
   @IsOptional()
   @IsBoolean({ message: 'Non blocking must be a boolean' })

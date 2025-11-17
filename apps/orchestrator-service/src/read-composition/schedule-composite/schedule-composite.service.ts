@@ -13,7 +13,11 @@ import {
   OfficeHoursResponseDto,
 } from '@app/contracts/dtos';
 import { TIMEOUTS } from '../../common/constants';
-import { parseTimeToMinutesUtc, getUtcDayOfWeek } from '@app/commons/utils';
+import {
+  parseTimeToMinutesUtc,
+  getUtcDayOfWeek,
+  toUtcDate,
+} from '@app/commons/utils';
 
 @Injectable()
 export class ScheduleCompositeService {
@@ -54,10 +58,18 @@ export class ScheduleCompositeService {
    * Composes schedules from provider directory, booked appointments, and active holds.
    */
   async listSlots(query: ScheduleSlotsQueryDto): Promise<ScheduleSlotDto[]> {
-    const { doctorId, serviceDate, locationId } = query;
+    const { doctorId, serviceDate, locationId, allowPast } = query;
 
     if (!doctorId || !serviceDate) {
       throw new Error('doctorId and serviceDate are required');
+    }
+
+    if (!allowPast) {
+      const now = new Date();
+      const serviceDateUtc = toUtcDate(serviceDate);
+      if (serviceDateUtc < now) {
+        return [];
+      }
     }
 
     // 1) Fetch doctor profile to get default appointment duration

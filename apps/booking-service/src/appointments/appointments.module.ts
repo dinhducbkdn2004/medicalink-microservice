@@ -33,6 +33,16 @@ import { ExpiredEventsCleanupService } from './expired-events-cleanup.service';
           ),
         inject: [ConfigService],
       },
+      {
+        name: 'NOTIFICATION_SERVICE',
+        imports: [ConfigModule],
+        useFactory: (configService: ConfigService) =>
+          RabbitMQConfig.createClientConfig(
+            configService,
+            QUEUE_NAMES.NOTIFICATION_QUEUE,
+          ),
+        inject: [ConfigService],
+      },
     ]),
   ],
   controllers: [AppointmentsController],

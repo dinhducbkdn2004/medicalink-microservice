@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { ConflictError, NotFoundError } from '@app/domain-errors';
 import { StaffRepository } from './staff.repository';
 import { PermissionAssignmentService } from '../permission/permission-assignment.service';
@@ -11,6 +12,7 @@ import {
   StaffStatsDto,
   PaginatedResponse,
 } from '@app/contracts';
+import { NOTIFICATION_PATTERNS } from '@app/contracts/patterns';
 
 @Injectable()
 export class StaffsService {
@@ -19,6 +21,8 @@ export class StaffsService {
   constructor(
     private readonly staffRepository: StaffRepository,
     private readonly permissionAssignmentService: PermissionAssignmentService,
+    @Inject('NOTIFICATION_SERVICE')
+    private readonly notificationClient: ClientProxy,
   ) {}
 
   async findAll(
@@ -91,6 +95,23 @@ export class StaffsService {
         error.stack,
       );
     }
+
+    const eventPayload = {
+      staffId: staff.id,
+      fullName: staff.fullName,
+      email: staff.email,
+      role: staff.role,
+      createdAt: staff.createdAt?.toISOString?.() ?? new Date().toISOString(),
+    };
+    this.notificationClient
+      .emit(NOTIFICATION_PATTERNS.STAFF_ACCOUNT_CREATED, eventPayload)
+      .subscribe({
+        error: (err) =>
+          this.logger.error(
+            `Failed to emit staff onboarding notification for ${staff.email}`,
+            err,
+          ),
+      });
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...result } = staff;

@@ -1,5 +1,12 @@
 import { Transform, Type } from 'class-transformer';
-import { IsOptional, IsString, Matches, IsInt, Min } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  Matches,
+  IsInt,
+  Min,
+  IsBoolean,
+} from 'class-validator';
 import { IsCuid } from '../../decorators';
 
 export class ScheduleSlotsPublicQueryDto {
@@ -23,4 +30,13 @@ export class ScheduleSlotsPublicQueryDto {
   @IsInt({ message: 'durationMinutes must be an integer' })
   @Min(1, { message: 'durationMinutes must be at least 1' })
   durationMinutes?: number;
+
+  @IsOptional()
+  @IsBoolean({ message: 'allowPast must be a boolean' })
+  @Transform(({ value }) => {
+    if (typeof value === 'boolean') return value;
+    else if (typeof value === 'string') return value?.toLowerCase() === 'true';
+    else return false;
+  })
+  allowPast?: boolean;
 }

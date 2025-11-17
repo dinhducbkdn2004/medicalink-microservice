@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppointmentsRepository } from './appointments.repository';
@@ -16,12 +16,16 @@ import {
   ConfirmAppointmentDto,
   PaginatedResponse,
 } from '@app/contracts';
-import { ORCHESTRATOR_PATTERNS } from '@app/contracts/patterns';
+import {
+  DOCTOR_PROFILES_PATTERNS,
+  ORCHESTRATOR_PATTERNS,
+} from '@app/contracts/patterns';
 import { firstValueFrom, timeout } from 'rxjs';
 import {
   Appointment,
   AppointmentStatus,
   Event,
+  Patient,
   Prisma,
 } from '../../prisma/generated/client';
 import { BadRequestError, NotFoundError } from '@app/domain-errors';
@@ -29,14 +33,24 @@ import {
   ListAppointmentsQueryDto,
   RescheduleAppointmentDto,
 } from '@app/contracts/dtos/booking';
+import {
+  AppointmentNotificationChannel,
+  AppointmentNotificationStatus,
+} from '@app/contracts/dtos/notification';
+import { AppointmentNotificationTriggerDto } from '@app/contracts/dtos/orchestrator';
 
 @Injectable()
 export class AppointmentsService {
+  private readonly logger = new Logger(AppointmentsService.name);
+  private readonly doctorAccountIdCache = new Map<string, string | null>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly appointmentsRepo: AppointmentsRepository,
     @Inject('ORCHESTRATOR_SERVICE')
     private readonly orchestratorClient: ClientProxy,
+    @Inject('PROVIDER_DIRECTORY_SERVICE')
+    private readonly providerDirectoryClient: ClientProxy,
   ) {}
 
   async createAppointment(dto: CreateAppointmentDto): Promise<Appointment> {
@@ -46,21 +60,28 @@ export class AppointmentsService {
       serviceDate: dto.serviceDate,
       timeStart: dto.timeStart,
       timeEnd: dto.timeEnd,
+      allowPast: true,
     });
     const serviceDate = toUtcDate(dto.serviceDate);
     const timeStart = combineDateWithTimeUtc(dto.serviceDate, dto.timeStart);
     const timeEnd = combineDateWithTimeUtc(dto.serviceDate, dto.timeEnd);
 
-    return await this.prisma.$transaction(async (tx) => {
+    const doctorAccountId = await this.resolveDoctorAccountId(dto.doctorId);
+    const appointment = await this.prisma.$transaction(async (tx) => {
       // 1. Create Event first
       const event = await tx.event.create({
         data: {
           doctorId: dto.doctorId,
+          doctorAccountId,
           locationId: dto.locationId,
           serviceDate,
           timeStart,
           timeEnd,
           eventType: 'APPOINTMENT',
+          metadata: {
+            bookingChannel: 'STAFF',
+            patientId: dto.patientId,
+          },
         },
       });
 
@@ -82,6 +103,8 @@ export class AppointmentsService {
 
       return appointment;
     });
+    void this.emitAppointmentBookedEvent(appointment.id, 'STAFF');
+    return appointment;
   }
 
   async createTempEvent(body: {
@@ -99,14 +122,17 @@ export class AppointmentsService {
       serviceDate: body.serviceDate,
       timeStart: body.timeStart,
       timeEnd: body.timeEnd,
+      allowPast: false,
     });
 
     const serviceDate = toUtcDate(body.serviceDate);
     const timeStart = combineDateWithTimeUtc(body.serviceDate, body.timeStart);
     const timeEnd = combineDateWithTimeUtc(body.serviceDate, body.timeEnd);
+    const doctorAccountId = await this.resolveDoctorAccountId(body.doctorId);
     return this.prisma.event.create({
       data: {
         doctorId: body.doctorId,
+        doctorAccountId,
         locationId: body.locationId,
         serviceDate,
         timeStart,
@@ -126,7 +152,7 @@ export class AppointmentsService {
     specialtyId: string;
   }): Promise<Appointment> {
     const now = new Date();
-    return this.prisma.$transaction(async (tx) => {
+    const appointment = await this.prisma.$transaction(async (tx) => {
       const ev = await tx.event.findUnique({ where: { id: dto.eventId } });
       if (!ev) throw new NotFoundError('Event not found');
       if (!ev.serviceDate || !ev.timeStart || !ev.timeEnd)
@@ -135,12 +161,24 @@ export class AppointmentsService {
       if (ev.expiresAt && ev.expiresAt <= now)
         throw new BadRequestError('Temp event has expired');
 
+      const doctorAccountId =
+        ev.doctorAccountId ??
+        (ev.doctorId ? await this.resolveDoctorAccountId(ev.doctorId) : null);
+
       await tx.event.update({
         where: { id: ev.id },
         data: {
           isTempHold: false,
           expiresAt: null,
           nonBlocking: false,
+          doctorAccountId,
+          metadata: {
+            ...(ev.metadata && typeof ev.metadata === 'object'
+              ? (ev.metadata as Record<string, any>)
+              : {}),
+            bookingChannel: 'PUBLIC',
+            patientId: dto.patientId,
+          },
         },
       });
 
@@ -152,12 +190,14 @@ export class AppointmentsService {
           locationId: ev.locationId as string,
           specialtyId: dto.specialtyId,
           reason: dto.reason ?? undefined,
-          status: 'BOOKED',
+          status: AppointmentStatus.BOOKED,
         },
       });
 
       return appointment;
     });
+    void this.emitAppointmentBookedEvent(appointment.id, 'PUBLIC');
+    return appointment;
   }
 
   async getAppointmentsByFilter(
@@ -283,6 +323,12 @@ export class AppointmentsService {
       data: { nonBlocking: true },
     });
 
+    void this.emitAppointmentStatusChangedEvent(
+      updated.id,
+      appointment.status,
+      updated.status,
+      dto.reason,
+    );
     return updated;
   }
 
@@ -303,9 +349,18 @@ export class AppointmentsService {
         throw new BadRequestError('Appointment already cancelled by staff');
     }
 
-    return await this.appointmentsRepo.updateAppointmentEntity(dto.id, {
-      status: AppointmentStatus.CONFIRMED,
-    });
+    const updated = await this.appointmentsRepo.updateAppointmentEntity(
+      dto.id,
+      {
+        status: AppointmentStatus.CONFIRMED,
+      },
+    );
+    void this.emitAppointmentStatusChangedEvent(
+      updated.id,
+      appointment.status,
+      updated.status,
+    );
+    return updated;
   }
 
   async completeAppointment(id: string): Promise<Appointment> {
@@ -324,6 +379,11 @@ export class AppointmentsService {
       where: { id: appointment.eventId },
       data: { nonBlocking: true },
     });
+    void this.emitAppointmentStatusChangedEvent(
+      updated.id,
+      appointment.status,
+      updated.status,
+    );
     return updated;
   }
 
@@ -331,7 +391,7 @@ export class AppointmentsService {
     id: string,
     dto: RescheduleAppointmentDto,
   ): Promise<Appointment> {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const appt = await tx.appointment.findUnique({
         where: { id },
         include: { event: true },
@@ -350,6 +410,7 @@ export class AppointmentsService {
           serviceDate: updateEvent.serviceDate || appt.event.serviceDate,
           timeStart: updateEvent.timeStart || appt.event.timeStart,
           timeEnd: updateEvent.timeEnd || appt.event.timeEnd,
+          allowPast: true,
         });
 
         const formattedTimeStart = combineDateWithTimeUtc(
@@ -381,8 +442,14 @@ export class AppointmentsService {
         where: { id },
         data: updateAppointment,
       });
-      return updated;
+      return { updated, previousStatus: appt.status };
     });
+    void this.emitAppointmentStatusChangedEvent(
+      result.updated.id,
+      result.previousStatus,
+      result.updated.status,
+    );
+    return result.updated;
   }
 
   private async ensureAvailableSlot(args: {
@@ -391,8 +458,10 @@ export class AppointmentsService {
     serviceDate: string;
     timeStart: string;
     timeEnd: string;
+    allowPast?: boolean;
   }): Promise<void> {
-    const { doctorId, locationId, serviceDate, timeStart, timeEnd } = args;
+    const { doctorId, locationId, serviceDate, timeStart, timeEnd, allowPast } =
+      args;
 
     const startDateTime = combineDateWithTimeUtc(serviceDate, timeStart);
     const endDateTime = combineDateWithTimeUtc(serviceDate, timeEnd);
@@ -408,6 +477,7 @@ export class AppointmentsService {
       await firstValueFrom(
         this.orchestratorClient
           .send<any>(ORCHESTRATOR_PATTERNS.SCHEDULE_SLOTS_LIST, {
+            allowPast,
             doctorId,
             locationId,
             serviceDate,
@@ -421,6 +491,229 @@ export class AppointmentsService {
     );
     if (!existsInSlots) {
       throw new BadRequestError('Selected time is not available');
+    }
+  }
+
+  private async emitAppointmentBookedEvent(
+    appointmentId: string,
+    bookingChannel: AppointmentNotificationChannel,
+  ): Promise<void> {
+    try {
+      const snapshot = await this.loadAppointmentSnapshot(appointmentId);
+      if (!snapshot) {
+        this.logger.warn(
+          `Cannot emit appointment booked notification. Appointment ${appointmentId} not found.`,
+        );
+        return;
+      }
+      if (!snapshot.patient.email) {
+        this.logger.warn(
+          `Cannot emit appointment booked notification. Patient ${snapshot.patientId} has no email.`,
+        );
+        return;
+      }
+      const metadata = this.extractEventMetadata(snapshot.event);
+      const resolvedChannel = this.resolveBookingChannel(
+        metadata,
+        bookingChannel,
+      );
+      const base = this.buildNotificationTriggerBase(snapshot, resolvedChannel);
+      const trigger: AppointmentNotificationTriggerDto = {
+        type: 'BOOKED',
+        ...base,
+        status: this.mapStatus(snapshot.status),
+        changedAt: snapshot.createdAt.toISOString(),
+      };
+      this.emitAppointmentNotificationTrigger(trigger);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to emit appointment booked notification for ${appointmentId}`,
+        error?.stack || error?.message,
+      );
+    }
+  }
+
+  private async emitAppointmentStatusChangedEvent(
+    appointmentId: string,
+    previousStatus: AppointmentStatus,
+    newStatus: AppointmentStatus,
+    statusNote?: string | null,
+  ): Promise<void> {
+    try {
+      const snapshot = await this.loadAppointmentSnapshot(appointmentId);
+      if (!snapshot) {
+        this.logger.warn(
+          `Cannot emit appointment status notification. Appointment ${appointmentId} not found.`,
+        );
+        return;
+      }
+      if (!snapshot.patient.email) {
+        this.logger.warn(
+          `Cannot emit appointment status notification. Patient ${snapshot.patientId} has no email.`,
+        );
+        return;
+      }
+      const metadata = this.extractEventMetadata(snapshot.event);
+      const resolvedChannel = this.resolveBookingChannel(metadata);
+      const base = this.buildNotificationTriggerBase(snapshot, resolvedChannel);
+      const trigger: AppointmentNotificationTriggerDto = {
+        type: 'STATUS_CHANGED',
+        ...base,
+        status: this.mapStatus(newStatus),
+        previousStatus: this.mapStatus(previousStatus),
+        changedAt: snapshot.updatedAt.toISOString(),
+        statusNote: statusNote ?? null,
+        reviewUrl:
+          newStatus === AppointmentStatus.COMPLETED
+            ? `https://medicalink.click/doctor/${snapshot.doctorId}/review`
+            : null,
+        statusMessage: this.buildStatusMessage(newStatus),
+      };
+      this.emitAppointmentNotificationTrigger(trigger);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to emit appointment status notification for ${appointmentId}`,
+        error?.stack || error?.message,
+      );
+    }
+  }
+
+  private emitAppointmentNotificationTrigger(
+    trigger: AppointmentNotificationTriggerDto,
+  ): void {
+    this.orchestratorClient
+      .emit(ORCHESTRATOR_PATTERNS.APPOINTMENT_NOTIFICATION_DISPATCH, trigger)
+      .subscribe({
+        error: (err) =>
+          this.logger.error(
+            `Failed to dispatch ${trigger.type} notification trigger for ${trigger.appointmentId}`,
+            err?.stack || err?.message,
+          ),
+      });
+  }
+
+  private async loadAppointmentSnapshot(appointmentId: string) {
+    return this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        patient: true,
+        event: true,
+      },
+    });
+  }
+
+  private buildNotificationTriggerBase(
+    snapshot: Appointment & { patient: Patient; event: Event | null },
+    bookingChannel: AppointmentNotificationChannel,
+  ): Omit<
+    AppointmentNotificationTriggerDto,
+    | 'type'
+    | 'status'
+    | 'previousStatus'
+    | 'changedAt'
+    | 'statusNote'
+    | 'reviewUrl'
+  > {
+    return {
+      appointmentId: snapshot.id,
+      patientId: snapshot.patientId,
+      patientEmail: snapshot.patient.email as string,
+      patientName: snapshot.patient.fullName,
+      bookingChannel,
+      doctorId: snapshot.doctorId,
+      specialtyId: snapshot.specialtyId,
+      locationId: snapshot.locationId,
+      schedule: {
+        serviceDate: this.formatDate(snapshot.event?.serviceDate),
+        timeStart: this.formatTime(snapshot.event?.timeStart),
+        timeEnd: this.formatTime(snapshot.event?.timeEnd),
+      },
+      notes: snapshot.notes ?? null,
+      reason: snapshot.reason ?? null,
+      lookupReference: snapshot.patientId,
+    };
+  }
+
+  private extractEventMetadata(
+    event: Event | null,
+  ): Record<string, any> | null {
+    if (event?.metadata && typeof event.metadata === 'object') {
+      return event.metadata as Record<string, any>;
+    }
+    return null;
+  }
+
+  private resolveBookingChannel(
+    metadata: Record<string, any> | null,
+    override?: AppointmentNotificationChannel,
+  ): AppointmentNotificationChannel {
+    if (override) return override;
+    const channel = metadata?.bookingChannel;
+    if (channel === 'PUBLIC' || channel === 'STAFF') {
+      return channel;
+    }
+    return 'STAFF';
+  }
+
+  private mapStatus(status: AppointmentStatus): AppointmentNotificationStatus {
+    return status as AppointmentNotificationStatus;
+  }
+
+  private buildStatusMessage(status: AppointmentStatus): string {
+    switch (status) {
+      case AppointmentStatus.CONFIRMED:
+        return 'Your appointment has been confirmed.';
+      case AppointmentStatus.CANCELLED_BY_PATIENT:
+        return 'Your appointment was cancelled by patient request.';
+      case AppointmentStatus.CANCELLED_BY_STAFF:
+        return 'Your appointment was cancelled by our support team.';
+      case AppointmentStatus.RESCHEDULED:
+        return 'Your appointment schedule has been updated.';
+      case AppointmentStatus.NO_SHOW:
+        return 'You missed the appointment.';
+      case AppointmentStatus.COMPLETED:
+        return 'Your appointment has been completed.';
+      default:
+        return 'Your appointment status has changed.';
+    }
+  }
+
+  private formatDate(value?: Date | null): string | null {
+    if (!value) return null;
+    return dayjs.utc(value).format('YYYY-MM-DD');
+  }
+
+  private formatTime(value?: Date | null): string | null {
+    if (!value) return null;
+    return dayjs.utc(value).format('HH:mm');
+  }
+
+  private async resolveDoctorAccountId(
+    doctorId?: string | null,
+  ): Promise<string | null> {
+    if (!doctorId) {
+      return null;
+    }
+    if (this.doctorAccountIdCache.has(doctorId)) {
+      return this.doctorAccountIdCache.get(doctorId) ?? null;
+    }
+    try {
+      const profile = await firstValueFrom(
+        this.providerDirectoryClient
+          .send<any>(DOCTOR_PROFILES_PATTERNS.FIND_ONE, doctorId)
+          .pipe(timeout(5000)),
+      );
+      const staffAccountId = profile?.staffAccountId ?? null;
+      this.doctorAccountIdCache.set(doctorId, staffAccountId);
+      return staffAccountId;
+    } catch (error: any) {
+      this.logger.warn(
+        `Unable to resolve staff account for doctor ${doctorId}: ${
+          error?.message ?? error
+        }`,
+      );
+      this.doctorAccountIdCache.set(doctorId, null);
+      return null;
     }
   }
 }

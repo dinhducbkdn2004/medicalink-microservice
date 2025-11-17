@@ -1,0 +1,28 @@
+<mj-text font-size="18px" font-weight="600">
+  Hi {{patientName}},
+</mj-text>
+<mj-text padding-bottom="8px">
+  {{statusMessage}}
+</mj-text>
+{{#if statusNote}}
+<mj-text color="#1E9DF1" font-weight="600" padding-bottom="8px">
+  Note from our team: {{statusNote}}
+</mj-text>
+{{/if}}
+<mj-table>
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Patient ID</td>
+    <td style="padding:4px 0;">{{patientId}}</td>
+  </tr>
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Appointment ID</td>
+    <td style="padding:4px 0;">{{appointmentId}}</td>
+  </tr>
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Updated at</td>
+    <td style="padding:4px 0;">{{changedAt}}</td>
+  </tr>
+</mj-table>
+<mj-text>
+  Need assistance? Share your patient ID ({{lookupReference}}) and we will help you track this visit.
+</mj-text>

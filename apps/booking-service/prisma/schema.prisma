@@ -75,6 +75,7 @@ model Event {
   expiresAt   DateTime?     @map("expires_at") @db.Timestamptz(6)
   nonBlocking Boolean       @default(false) @map("non_blocking")
   doctorId    String?       @map("doctor_id") @db.VarChar(27)
+  doctorAccountId String?   @map("doctor_account_id") @db.VarChar(27)
   locationId  String?       @map("location_id") @db.VarChar(27)
   serviceDate DateTime?     @map("service_date") @db.Date
   timeStart   DateTime?     @map("time_start") @db.Time(6)

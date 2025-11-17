@@ -26,7 +26,9 @@ export class TemplateRenderer {
       const entries = await fs.readdir(partialsDir, { withFileTypes: true });
       for (const entry of entries) {
         if (entry.isFile() && entry.name.endsWith('.hbs')) {
-          const key = entry.name.replace(/\.hbs$/, '');
+          const key = entry.name
+            .replace(/\.mjml\.hbs$/i, '')
+            .replace(/\.hbs$/i, '');
           const content = await fs.readFile(
             join(partialsDir, entry.name),
             'utf8',
@@ -67,7 +69,7 @@ export class TemplateRenderer {
       body,
       year: new Date().getFullYear(),
     });
-    const { html, errors } = mjml2html(mjmlSource, { minify: true });
+    const { html, errors } = mjml2html(mjmlSource, { minify: false });
     if (errors && errors.length > 0) {
       const first = errors[0];
       throw new Error(

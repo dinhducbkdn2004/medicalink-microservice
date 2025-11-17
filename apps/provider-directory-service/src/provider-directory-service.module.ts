@@ -8,6 +8,7 @@ import { OfficeHoursModule } from './office-hours/office-hours.module';
 import { HealthController } from './health/health.controller';
 import { RabbitMQModule } from '@app/rabbitmq';
 import { MicroserviceClientsModule } from './clients/microservice-clients.module';
+import { AppointmentsContextModule } from './appointments-context/appointments-context.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { MicroserviceClientsModule } from './clients/microservice-clients.module
     WorkLocationsModule,
     OfficeHoursModule,
     DoctorsModule,
+    AppointmentsContextModule,
   ],
   controllers: [HealthController],
 })

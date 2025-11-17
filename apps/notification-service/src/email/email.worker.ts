@@ -37,9 +37,6 @@ export class EmailQueueWorker implements OnModuleInit, OnModuleDestroy {
       },
     );
 
-    this.worker.on('completed', (job) =>
-      this.logger.debug(`Email job completed: ${job.id}`),
-    );
     this.worker.on('failed', (job, err) =>
       this.logger.error(`Email job failed: ${job?.id} - ${err?.message}`),
     );

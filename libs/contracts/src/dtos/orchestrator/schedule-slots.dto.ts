@@ -3,6 +3,7 @@ export class ScheduleSlotsQueryDto {
   serviceDate: string;
   locationId?: string;
   durationMinutes?: number;
+  allowPast?: boolean;
 }
 
 export class ScheduleSlotDto {

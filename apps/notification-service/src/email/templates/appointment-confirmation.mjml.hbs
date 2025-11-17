@@ -1,0 +1,76 @@
+<mj-text font-size="18px" font-weight="600">
+  Hi {{patientName}},
+</mj-text>
+<mj-text>
+  We received your appointment booking and saved the details below. Keep the patient ID handy so you can reference or modify this visit later.
+</mj-text>
+<mj-table>
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Patient ID</td>
+    <td style="padding:4px 0;">{{patientId}}</td>
+  </tr>
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Appointment ID</td>
+    <td style="padding:4px 0;">{{appointmentId}}</td>
+  </tr>
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Status</td>
+    <td style="padding:4px 0;">{{statusLabel}}</td>
+  </tr>
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Doctor</td>
+    <td style="padding:4px 0;">{{doctorName}}</td>
+  </tr>
+  {{#if specialtyName}}
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Specialty</td>
+    <td style="padding:4px 0;">{{specialtyName}}</td>
+  </tr>
+  {{/if}}
+  {{#if serviceDate}}
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Date</td>
+    <td style="padding:4px 0;">{{serviceDate}}</td>
+  </tr>
+  {{/if}}
+  {{#if timeStart}}
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Time</td>
+    <td style="padding:4px 0;">{{timeStart}} – {{timeEnd}}</td>
+  </tr>
+  {{/if}}
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Location</td>
+    <td style="padding:4px 0;">{{locationName}}</td>
+  </tr>
+  {{#if locationAddress}}
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Address</td>
+    <td style="padding:4px 0;">{{locationAddress}}</td>
+  </tr>
+  {{/if}}
+  {{#if locationPhone}}
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Phone</td>
+    <td style="padding:4px 0;">{{locationPhone}}</td>
+  </tr>
+  {{/if}}
+  <tr>
+    <td style="font-weight:600;padding:4px 0;width:160px;">Booked via</td>
+    <td style="padding:4px 0;">{{bookingChannelLabel}}</td>
+  </tr>
+</mj-table>
+{{#if reason}}
+<mj-text>
+  <strong>Visit reason:</strong> {{reason}}
+</mj-text>
+{{/if}}
+{{#if notes}}
+<mj-text>
+  <strong>Notes:</strong> {{{notes}}}
+</mj-text>
+{{/if}}
+<mj-text>
+  Need to update this booking? Share your patient ID ({{lookupReference}}) with our care team and we will help you right away.
+</mj-text>
+

@@ -30,6 +30,10 @@ export const ORCHESTRATOR_PATTERNS = {
   APPOINTMENT_RESCHEDULE: 'orchestrator.appointment.reschedule',
   APPOINTMENT_CANCEL: 'orchestrator.appointment.cancel',
 
+  // Appointment notification dispatch
+  APPOINTMENT_NOTIFICATION_DISPATCH:
+    'orchestrator.appointment.notification.dispatch',
+
   // Cache management
   CACHE_INVALIDATE: 'orchestrator.cache.invalidate',
   CACHE_CLEAR: 'orchestrator.cache.clear',

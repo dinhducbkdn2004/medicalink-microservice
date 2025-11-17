@@ -14,3 +14,5 @@ export * from './patients.patterns';
 
 export * from './orchestrator.patterns';
 export * from './orchestrator.events';
+export * from './provider.patterns';
+export * from './notification.patterns';
