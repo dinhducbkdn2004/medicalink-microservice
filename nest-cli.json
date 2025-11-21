@@ -61,7 +61,13 @@
       "entryFile": "main",
       "sourceRoot": "apps/notification-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/notification-service/tsconfig.app.json"
+        "tsConfigPath": "apps/notification-service/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "email/templates/**/*.hbs",
+            "outDir": "dist/apps/notification-service"
+          }
+        ]
       }
     },
     "orchestrator-service": {
