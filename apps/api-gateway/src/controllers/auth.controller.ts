@@ -7,12 +7,16 @@ import type {
   JwtPayloadDto,
   ChangePasswordResponseDto,
   PostResponseDto,
+  PasswordResetResponseDto,
 } from '@app/contracts';
 import {
   LoginDto,
   RefreshTokenDto,
   ChangePasswordDto,
   VerifyPasswordDto,
+  RequestPasswordResetDto,
+  VerifyResetCodeDto,
+  ResetPasswordDto,
   Public,
   CurrentUser,
 } from '@app/contracts';
@@ -85,6 +89,45 @@ export class AuthController {
         email: user.email,
         password: verifyPasswordDto.password,
       },
+    );
+  }
+
+  @Public()
+  @Post('password-reset/request')
+  @HttpCode(200)
+  async requestPasswordReset(
+    @Body() dto: RequestPasswordResetDto,
+  ): Promise<PasswordResetResponseDto> {
+    return this.microserviceService.sendWithTimeout<PasswordResetResponseDto>(
+      this.accountsClient,
+      AUTH_PATTERNS.REQUEST_PASSWORD_RESET,
+      dto,
+    );
+  }
+
+  @Public()
+  @Post('password-reset/verify-code')
+  @HttpCode(200)
+  async verifyResetCode(
+    @Body() dto: VerifyResetCodeDto,
+  ): Promise<PasswordResetResponseDto> {
+    return this.microserviceService.sendWithTimeout<PasswordResetResponseDto>(
+      this.accountsClient,
+      AUTH_PATTERNS.VERIFY_RESET_CODE,
+      dto,
+    );
+  }
+
+  @Public()
+  @Post('password-reset/confirm')
+  @HttpCode(200)
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+  ): Promise<PasswordResetResponseDto> {
+    return this.microserviceService.sendWithTimeout<PasswordResetResponseDto>(
+      this.accountsClient,
+      AUTH_PATTERNS.RESET_PASSWORD,
+      dto,
     );
   }
 }

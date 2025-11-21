@@ -128,6 +128,34 @@ export class EmailController {
     });
   }
 
+  @EventPattern(NOTIFICATION_PATTERNS.PASSWORD_RESET_CODE)
+  async handlePasswordResetCode(
+    @Payload()
+    event: {
+      email: string;
+      fullName: string;
+      resetCode: string;
+      expiryMinutes: number;
+    },
+  ): Promise<void> {
+    if (!event?.email) {
+      this.logger.warn('Skipping password reset email due to missing email.');
+      return;
+    }
+    const subject = 'Reset your MedicaLink password';
+    await this.sendEmailWithTracing('password-reset', {
+      templateKey: 'password-reset',
+      to: event.email,
+      subject,
+      context: {
+        subject,
+        fullName: event.fullName,
+        resetCode: event.resetCode,
+        expiryMinutes: event.expiryMinutes,
+      },
+    });
+  }
+
   private getBookedSubject(channel: AppointmentNotificationChannel): string {
     return channel === 'PUBLIC'
       ? 'Your appointment request is confirmed'

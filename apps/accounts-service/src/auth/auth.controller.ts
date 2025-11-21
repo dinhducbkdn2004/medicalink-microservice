@@ -5,6 +5,9 @@ import {
   ChangePasswordDto,
   LoginDto,
   RefreshTokenDto,
+  RequestPasswordResetDto,
+  VerifyResetCodeDto,
+  ResetPasswordDto,
 } from '@app/contracts/dtos/auth';
 import { AUTH_PATTERNS } from '@app/contracts/patterns';
 
@@ -74,5 +77,20 @@ export class AuthController {
       success: true,
       message: 'Password verified successfully',
     };
+  }
+
+  @MessagePattern(AUTH_PATTERNS.REQUEST_PASSWORD_RESET)
+  async requestPasswordReset(@Payload() dto: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(dto);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.VERIFY_RESET_CODE)
+  async verifyResetCode(@Payload() dto: VerifyResetCodeDto) {
+    return this.authService.verifyResetCode(dto);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.RESET_PASSWORD)
+  async resetPassword(@Payload() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }
