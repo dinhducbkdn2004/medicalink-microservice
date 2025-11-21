@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { join } from 'path';
 import { promises as fs } from 'fs';
+import { existsSync } from 'fs';
 
 export interface LoadedTemplate {
   key: string;
@@ -10,14 +11,32 @@ export interface LoadedTemplate {
 @Injectable()
 export class TemplateLoader {
   private cache = new Map<string, string>();
-  private baseDir = join(
-    process.cwd(),
-    'apps',
-    'notification-service',
-    'src',
-    'email',
-    'templates',
-  );
+  private baseDir = this.getTemplatesPath();
+
+  private getTemplatesPath(): string {
+    // In production (Docker), files are in dist folder
+    const distPath = join(
+      process.cwd(),
+      'dist',
+      'apps',
+      'notification-service',
+      'email',
+      'templates',
+    );
+
+    // In development, files are in src folder
+    const srcPath = join(
+      process.cwd(),
+      'apps',
+      'notification-service',
+      'src',
+      'email',
+      'templates',
+    );
+
+    // Use dist path if it exists (production), otherwise use src path (development)
+    return existsSync(distPath) ? distPath : srcPath;
+  }
 
   async loadTemplate(templateKey: string): Promise<LoadedTemplate> {
     const cached = this.cache.get(templateKey);

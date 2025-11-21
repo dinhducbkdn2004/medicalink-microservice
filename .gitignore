@@ -80,3 +80,7 @@ nginx/ssl/
 
 # ESLint cache
 .eslintcache
+
+# Local docs
+CLAUDE.md
+.claude
