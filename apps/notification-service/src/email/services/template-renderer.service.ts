@@ -4,6 +4,7 @@ import mjml2html from 'mjml';
 import { TemplateLoader } from './template-loader.service';
 import { join } from 'path';
 import { promises as fs } from 'fs';
+import { existsSync } from 'fs';
 
 @Injectable()
 export class TemplateRenderer {
@@ -11,17 +12,32 @@ export class TemplateRenderer {
 
   constructor(private readonly loader: TemplateLoader) {}
 
-  private async registerPartialsOnce(): Promise<void> {
-    if (this.partialsRegistered) return;
-    const partialsDir = join(
+  private getTemplatesPath(): string {
+    const distPath = join(
+      process.cwd(),
+      'dist',
+      'apps',
+      'notification-service',
+      'email',
+      'templates',
+    );
+
+    const srcPath = join(
       process.cwd(),
       'apps',
       'notification-service',
       'src',
       'email',
       'templates',
-      'partials',
     );
+
+    return existsSync(distPath) ? distPath : srcPath;
+  }
+
+  private async registerPartialsOnce(): Promise<void> {
+    if (this.partialsRegistered) return;
+    const templatesPath = this.getTemplatesPath();
+    const partialsDir = join(templatesPath, 'partials');
     try {
       const entries = await fs.readdir(partialsDir, { withFileTypes: true });
       for (const entry of entries) {
@@ -52,16 +68,8 @@ export class TemplateRenderer {
     const compiledBody = Handlebars.compile(bodyTemplate);
     const body = compiledBody(context ?? {});
 
-    const layoutPath = join(
-      process.cwd(),
-      'apps',
-      'notification-service',
-      'src',
-      'email',
-      'templates',
-      'layouts',
-      'base.mjml.hbs',
-    );
+    const templatesPath = this.getTemplatesPath();
+    const layoutPath = join(templatesPath, 'layouts', 'base.mjml.hbs');
     const layoutSource = await fs.readFile(layoutPath, 'utf8');
     const compiledLayout = Handlebars.compile(layoutSource);
     const mjmlSource = compiledLayout({

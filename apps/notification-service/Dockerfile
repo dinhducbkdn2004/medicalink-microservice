@@ -78,6 +78,9 @@ COPY --from=builder --chown=medicalink:nodejs /app/apps/notification-service/pri
 # Copy built application from builder stage with correct ownership
 COPY --from=builder --chown=medicalink:nodejs /app/dist/apps/notification-service ./dist/apps/notification-service
 
+# Copy email templates to dist folder for production use
+COPY --from=builder --chown=medicalink:nodejs /app/apps/notification-service/src/email/templates ./dist/apps/notification-service/email/templates
+
 # Switch to non-root user
 USER medicalink
 
