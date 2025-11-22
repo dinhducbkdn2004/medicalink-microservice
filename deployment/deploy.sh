@@ -161,11 +161,11 @@ case $COMMAND in
         case $SERVICE in
             all|infrastructure)
                 # Infrastructure services can use more parallelism
-                docker compose -f "$COMPOSE_FILE" build --no-cache --parallel=2
+                COMPOSE_PARALLEL_LIMIT=2 docker compose -f "$COMPOSE_FILE" build --no-cache --parallel
                 ;;
             *)
-                # Individual services use limited parallelism
-                docker compose -f "$COMPOSE_FILE" build --no-cache --parallel=1
+                # Individual services use limited parallelism (sequential build)
+                docker compose -f "$COMPOSE_FILE" build --no-cache
                 ;;
         esac
         print_success "$SERVICE built successfully"
@@ -239,20 +239,20 @@ case $COMMAND in
         echo -e "${YELLOW} Building Docker images with forced rebuild (includes Prisma generation and NestJS build)...${NC}"
         case $SERVICE in
             all)
-                # Build all services with very limited parallelism
-                docker compose -f "$COMPOSE_FILE" build --no-cache --parallel=1
+                # Build all services sequentially to prevent resource exhaustion
+                docker compose -f "$COMPOSE_FILE" build --no-cache
                 ;;
             infrastructure)
                 # Infrastructure services can use slightly more parallelism
-                docker compose -f "$COMPOSE_FILE" build --no-cache --parallel=2
+                COMPOSE_PARALLEL_LIMIT=2 docker compose -f "$COMPOSE_FILE" build --no-cache --parallel
                 ;;
             content|booking|notification|provider)
-                # Services with Prisma need extra care
-                docker compose -f "$COMPOSE_FILE" build --no-cache --parallel=1
+                # Services with Prisma need extra care (sequential build)
+                docker compose -f "$COMPOSE_FILE" build --no-cache
                 ;;
             *)
-                # Other services use limited parallelism
-                docker compose -f "$COMPOSE_FILE" build --no-cache --parallel=1
+                # Other services use sequential build
+                docker compose -f "$COMPOSE_FILE" build --no-cache
                 ;;
         esac
         
@@ -306,13 +306,13 @@ case $COMMAND in
         echo -e "${YELLOW} Building from scratch with no cache...${NC}"
         case $SERVICE in
             all)
-                docker compose -f "$COMPOSE_FILE" build --no-cache --parallel=1 --pull
+                docker compose -f "$COMPOSE_FILE" build --no-cache --pull
                 ;;
             infrastructure)
-                docker compose -f "$COMPOSE_FILE" build --no-cache --parallel=2 --pull
+                COMPOSE_PARALLEL_LIMIT=2 docker compose -f "$COMPOSE_FILE" build --no-cache --parallel --pull
                 ;;
             *)
-                docker compose -f "$COMPOSE_FILE" build --no-cache --parallel=1 --pull
+                docker compose -f "$COMPOSE_FILE" build --no-cache --pull
                 ;;
         esac
         
