@@ -1,5 +1,5 @@
 import { IsCuid } from '@app/contracts/decorators';
-import { IsDateString, IsOptional, Matches } from 'class-validator';
+import { IsOptional, IsString, Matches } from 'class-validator';
 
 export class RescheduleAppointmentDto {
   @IsOptional()
@@ -11,7 +11,10 @@ export class RescheduleAppointmentDto {
   locationId: string;
 
   @IsOptional()
-  @IsDateString({}, { message: 'serviceDate must be a valid date' })
+  @IsString({ message: 'serviceDate must be a string' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'serviceDate must be in YYYY-MM-DD format',
+  })
   serviceDate: string;
 
   @IsOptional()

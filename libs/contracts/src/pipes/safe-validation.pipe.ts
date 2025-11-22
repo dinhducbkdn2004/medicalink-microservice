@@ -39,7 +39,7 @@ export class SafeValidationPipe extends ValidationPipe {
 
     // XSS patterns
     const xssPattern =
-      /<script|<iframe|javascript:|onerror\s*=|onload\s*=|<img|<svg|<object|<embed|<link|<style|onclick\s*=|onmouseover\s*=/i;
+      /<script|<iframe|javascript:|onerror\s*=|onload\s*=|<object|<embed|<link|<style|onclick\s*=|onmouseover\s*=/i;
 
     // SQL Injection patterns
     const sqlPattern =

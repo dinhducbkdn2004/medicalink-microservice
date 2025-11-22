@@ -8,6 +8,8 @@ import {
   combineDateWithTimeUtc,
   toUtcDate,
   nowUtc,
+  ymdUtc,
+  extractTimeHHmm,
 } from '@app/commons/utils';
 import {
   CreateAppointmentDto,
@@ -398,34 +400,46 @@ export class AppointmentsService {
       });
       if (!appt) throw new NotFoundError('Appointment not found');
 
-      const updateEvent: any = {};
-      if (dto.serviceDate) updateEvent.serviceDate = toUtcDate(dto.serviceDate);
-      if (dto.timeStart) updateEvent.timeStart = dto.timeStart;
-      if (dto.timeEnd) updateEvent.timeEnd = dto.timeEnd;
+      if (dto.serviceDate || dto.timeStart || dto.timeEnd) {
+        const serviceDateString =
+          dto.serviceDate ||
+          (appt.event.serviceDate ? ymdUtc(appt.event.serviceDate) : null);
+        const timeStartString =
+          dto.timeStart ||
+          (appt.event.timeStart ? extractTimeHHmm(appt.event.timeStart) : null);
+        const timeEndString =
+          dto.timeEnd ||
+          (appt.event.timeEnd ? extractTimeHHmm(appt.event.timeEnd) : null);
 
-      if (Object.keys(updateEvent).length > 0) {
+        if (!serviceDateString || !timeStartString || !timeEndString) {
+          throw new BadRequestError(
+            'Missing required event data: serviceDate, timeStart, or timeEnd',
+          );
+        }
+
         await this.ensureAvailableSlot({
           doctorId: appt.doctorId,
           locationId: appt.locationId,
-          serviceDate: updateEvent.serviceDate || appt.event.serviceDate,
-          timeStart: updateEvent.timeStart || appt.event.timeStart,
-          timeEnd: updateEvent.timeEnd || appt.event.timeEnd,
+          serviceDate: serviceDateString,
+          timeStart: timeStartString,
+          timeEnd: timeEndString,
           allowPast: true,
         });
 
+        const serviceDateUtc = toUtcDate(serviceDateString);
         const formattedTimeStart = combineDateWithTimeUtc(
-          updateEvent.serviceDate,
-          updateEvent.timeStart,
+          serviceDateString,
+          timeStartString,
         );
         const formattedTimeEnd = combineDateWithTimeUtc(
-          updateEvent.serviceDate,
-          updateEvent.timeEnd,
+          serviceDateString,
+          timeEndString,
         );
 
         await tx.event.update({
           where: { id: appt.eventId },
           data: {
-            serviceDate: updateEvent.serviceDate,
+            serviceDate: serviceDateUtc,
             timeStart: formattedTimeStart,
             timeEnd: formattedTimeEnd,
           },
