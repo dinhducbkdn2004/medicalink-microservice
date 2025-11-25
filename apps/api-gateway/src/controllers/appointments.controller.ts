@@ -32,6 +32,7 @@ import { ORCHESTRATOR_PATTERNS } from '@app/contracts/patterns';
 import { EventTempDto } from '@app/contracts/dtos/event-temp.dto';
 import { CancelAppointmentBodyDto } from '@app/contracts/dtos/api-gateway/cancel-appointment-body.dto';
 import { PublicCreateThrottle } from '../utils/custom-throttle.decorator';
+import { SuccessMessage } from '../decorators/success-message.decorator';
 
 @Controller('appointments')
 export class AppointmentsController {
@@ -83,6 +84,7 @@ export class AppointmentsController {
   @Public()
   @PublicCreateThrottle()
   @Post('public')
+  @SuccessMessage('Appointment booked successfully')
   async createPublic(@Body() body: PublicCreateAppointmentFromEventDto) {
     return this.microserviceService.sendWithTimeout(
       this.bookingClient,
@@ -94,6 +96,7 @@ export class AppointmentsController {
 
   @RequireCreatePermission('appointments')
   @Post()
+  @SuccessMessage('Appointment created successfully')
   async create(@Body() body: CreateAppointmentDto) {
     return this.microserviceService.sendWithTimeout(
       this.bookingClient,
@@ -105,6 +108,7 @@ export class AppointmentsController {
 
   @RequireUpdatePermission('appointments')
   @Patch(':id/complete')
+  @SuccessMessage('Appointment completed successfully')
   complete(@Param('id') id: string) {
     return this.microserviceService.sendWithTimeout(
       this.bookingClient,
@@ -116,6 +120,7 @@ export class AppointmentsController {
 
   @Public()
   @Post('hold')
+  @SuccessMessage('Schedule slot held successfully')
   async createHold(@Body() dto: EventTempDto) {
     return this.microserviceService.sendWithTimeout(
       this.bookingClient,
@@ -127,6 +132,7 @@ export class AppointmentsController {
 
   @RequireUpdatePermission('appointments')
   @Patch(':id')
+  @SuccessMessage('Appointment updated successfully')
   update(
     @Param('id') id: string,
     @Body() dto: Omit<UpdateAppointmentDto, 'id'>,
@@ -146,6 +152,7 @@ export class AppointmentsController {
   // Reschedule directly via booking-service
   @RequireUpdatePermission('appointments')
   @Patch(':id/reschedule')
+  @SuccessMessage('Appointment rescheduled successfully')
   async reschedule(
     @Param('id') id: string,
     @Body() body: RescheduleAppointmentDto,
@@ -161,6 +168,7 @@ export class AppointmentsController {
 
   @RequireDeletePermission('appointments')
   @Delete(':id')
+  @SuccessMessage('Appointment cancelled successfully')
   cancel(@Param('id') id: string, @Body() body: CancelAppointmentBodyDto) {
     const payload: CancelAppointmentDto = {
       id,
@@ -178,6 +186,7 @@ export class AppointmentsController {
 
   @RequireUpdatePermission('appointments')
   @Patch(':id/confirm')
+  @SuccessMessage('Appointment confirmed successfully')
   confirm(@Param('id') id: string) {
     const payload: ConfirmAppointmentDto = { id };
     return this.microserviceService.sendWithTimeout(

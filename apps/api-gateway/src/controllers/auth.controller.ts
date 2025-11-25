@@ -1,4 +1,4 @@
-import { Body, Controller, Inject, Post, Get, HttpCode } from '@nestjs/common';
+import { Body, Controller, Inject, Post, Get, Patch } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { IStaffAccount } from '@app/contracts/interfaces';
 import type {
@@ -7,7 +7,6 @@ import type {
   JwtPayloadDto,
   ChangePasswordResponseDto,
   PostResponseDto,
-  PasswordResetResponseDto,
 } from '@app/contracts';
 import {
   LoginDto,
@@ -21,7 +20,9 @@ import {
   CurrentUser,
 } from '@app/contracts';
 import { MicroserviceService } from '../utils/microservice.service';
-import { AUTH_PATTERNS } from '@app/contracts/patterns';
+import { AUTH_PATTERNS, STAFFS_PATTERNS } from '@app/contracts/patterns';
+import { SuccessMessage } from '../decorators/success-message.decorator';
+import { UpdateSelfAccountDto } from '@app/contracts/dtos/staff/update-self-account.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -32,6 +33,7 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @SuccessMessage('Logged in successfully')
   async login(@Body() loginDto: LoginDto): Promise<LoginResponseDto> {
     return this.microserviceService.sendWithTimeout<LoginResponseDto>(
       this.accountsClient,
@@ -42,6 +44,7 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
+  @SuccessMessage('Refreshed token successfully')
   async refresh(
     @Body() refreshTokenDto: RefreshTokenDto,
   ): Promise<RefreshTokenResponseDto> {
@@ -61,7 +64,20 @@ export class AuthController {
     );
   }
 
+  @Patch('profile')
+  async updateProfile(
+    @Body() updateProfileDto: UpdateSelfAccountDto,
+    @CurrentUser() user: JwtPayloadDto,
+  ) {
+    return this.microserviceService.sendWithTimeout(
+      this.accountsClient,
+      STAFFS_PATTERNS.UPDATE_SELF,
+      { staffAccountId: user.sub, data: updateProfileDto },
+    );
+  }
+
   @Post('change-password')
+  @SuccessMessage('Password changed successfully')
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDto,
     @CurrentUser() user: JwtPayloadDto,
@@ -77,11 +93,11 @@ export class AuthController {
   }
 
   @Post('verify-password')
-  @HttpCode(200)
+  @SuccessMessage('Password verified successfully')
   async verifyPassword(
     @Body() verifyPasswordDto: VerifyPasswordDto,
     @CurrentUser() user: JwtPayloadDto,
-  ): Promise<PostResponseDto> {
+  ) {
     return this.microserviceService.sendWithTimeout<PostResponseDto>(
       this.accountsClient,
       AUTH_PATTERNS.VERIFY_PASSWORD,
@@ -94,11 +110,11 @@ export class AuthController {
 
   @Public()
   @Post('password-reset/request')
-  @HttpCode(200)
-  async requestPasswordReset(
-    @Body() dto: RequestPasswordResetDto,
-  ): Promise<PasswordResetResponseDto> {
-    return this.microserviceService.sendWithTimeout<PasswordResetResponseDto>(
+  @SuccessMessage(
+    'Password reset requested successfully. Check your email for the code.',
+  )
+  async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    return this.microserviceService.sendWithTimeout(
       this.accountsClient,
       AUTH_PATTERNS.REQUEST_PASSWORD_RESET,
       dto,
@@ -107,11 +123,9 @@ export class AuthController {
 
   @Public()
   @Post('password-reset/verify-code')
-  @HttpCode(200)
-  async verifyResetCode(
-    @Body() dto: VerifyResetCodeDto,
-  ): Promise<PasswordResetResponseDto> {
-    return this.microserviceService.sendWithTimeout<PasswordResetResponseDto>(
+  @SuccessMessage('Code verified successfully')
+  async verifyResetCode(@Body() dto: VerifyResetCodeDto) {
+    return this.microserviceService.sendWithTimeout(
       this.accountsClient,
       AUTH_PATTERNS.VERIFY_RESET_CODE,
       dto,
@@ -120,11 +134,9 @@ export class AuthController {
 
   @Public()
   @Post('password-reset/confirm')
-  @HttpCode(200)
-  async resetPassword(
-    @Body() dto: ResetPasswordDto,
-  ): Promise<PasswordResetResponseDto> {
-    return this.microserviceService.sendWithTimeout<PasswordResetResponseDto>(
+  @SuccessMessage('Password reset successfully')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.microserviceService.sendWithTimeout(
       this.accountsClient,
       AUTH_PATTERNS.RESET_PASSWORD,
       dto,

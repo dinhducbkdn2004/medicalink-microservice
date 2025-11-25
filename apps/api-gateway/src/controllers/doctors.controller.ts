@@ -15,13 +15,11 @@ import {
   CreateAccountDto,
   UpdateStaffDto,
   StaffQueryDto,
-  StaffStatsDto,
   RequireReadPermission,
   RequireUpdatePermission,
   RequireDeletePermission,
   CurrentUser,
   RequireCreatePermission,
-  DoctorSearchCompositeQueryDto,
   ORCHESTRATOR_PATTERNS,
   DOCTOR_ACCOUNTS_PATTERNS,
 } from '@app/contracts';
@@ -57,37 +55,6 @@ export class DoctorsController {
       data: result.data,
       meta: result.meta,
     };
-  }
-
-  @RequireReadPermission('doctors')
-  @Get('stats')
-  async getStats(): Promise<StaffStatsDto> {
-    return this.microserviceService.sendWithTimeout<StaffStatsDto>(
-      this.accountsClient,
-      DOCTOR_ACCOUNTS_PATTERNS.STATS,
-      {},
-    );
-  }
-
-  /**
-   * Search doctors with complete data (account + profile merged)
-   * Uses orchestrator for read composition with caching
-   */
-  @RequireReadPermission('doctors')
-  @Get('search/complete')
-  async searchDoctorsComplete(
-    @Query() query: DoctorSearchCompositeQueryDto,
-    @CurrentUser() _user?: JwtPayloadDto,
-  ) {
-    // Use orchestrator to get composite list with profileId, isActive, and avatarUrl
-    return this.microserviceService.sendWithTimeout(
-      this.orchestratorClient,
-      ORCHESTRATOR_PATTERNS.DOCTOR_SEARCH_COMPOSITE,
-      query,
-      {
-        timeoutMs: 20000,
-      },
-    );
   }
 
   @RequireReadPermission('doctors')

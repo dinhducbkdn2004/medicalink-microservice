@@ -14,6 +14,14 @@ export class CreateDoctorProfileDto {
   @IsCuid({ message: 'Staff account ID must be a valid CUID' })
   staffAccountId: string;
 
+  @IsString({ message: 'Full name must be a string' })
+  @MaxLength(100, { message: 'Full name must not exceed 100 characters' })
+  fullName: string;
+
+  @IsBoolean({ message: 'isMale must be a boolean' })
+  @IsOptional()
+  isMale?: boolean;
+
   @IsBoolean({ message: 'isActive must be a boolean' })
   @IsOptional()
   isActive?: boolean;

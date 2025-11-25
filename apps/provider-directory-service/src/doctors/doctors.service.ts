@@ -43,10 +43,16 @@ export class DoctorsService {
    * Create an empty doctor profile linked to a staff account
    * Used by orchestrator service during doctor account creation
    */
-  async createEmpty(staffAccountId: string): Promise<DoctorProfileResponseDto> {
+  async createEmpty(payload: {
+    staffAccountId: string;
+    fullName: string;
+    isMale: boolean;
+  }): Promise<DoctorProfileResponseDto> {
     return this.doctorRepo.create({
-      staffAccountId,
-      isActive: false, // Inactive until profile is completed
+      staffAccountId: payload.staffAccountId,
+      isActive: false,
+      fullName: payload.fullName,
+      isMale: payload.isMale,
     });
   }
 
@@ -118,22 +124,26 @@ export class DoctorsService {
   async update(
     id: string,
     updateDoctorDto: Omit<UpdateDoctorProfileDto, 'id'>,
+    byStaffAccountId?: boolean,
   ): Promise<DoctorProfileResponseDto> {
-    // Check if doctor exists first and get current data for asset comparison
-    const existing = await this.doctorRepo.findOne(id);
+    let existing: DoctorProfileResponseDto | null = null;
+    if (byStaffAccountId) {
+      existing = await this.doctorRepo.findOneByStaffAccountId({
+        staffAccountId: id,
+      });
+    } else {
+      existing = await this.doctorRepo.findOne(id);
+    }
     if (!existing) {
-      throw new NotFoundError(`Doctor profile with id ${id} not found`);
+      throw new NotFoundError(`Doctor profile not found`);
     }
 
-    // Extract current asset URLs for comparison
     const prevAssets = this.extractAssetPublicIds(existing);
 
-    const result = await this.doctorRepo.update(id, updateDoctorDto);
+    const result = await this.doctorRepo.update(existing.id, updateDoctorDto);
 
-    // Extract new asset URLs
     const nextAssets = this.extractAssetPublicIds(result);
 
-    // Synchronous cache invalidation (targeted + lists)
     await this.doctorCacheInvalidation.invalidateByStaffAccountId(
       result.staffAccountId,
     );
@@ -144,24 +154,6 @@ export class DoctorsService {
     });
 
     return result;
-  }
-
-  /**
-   * Update self profile by staff account id; resolves profile then delegates to update
-   */
-  async updateSelf(
-    staffAccountId: string,
-    updateDoctorDto: Omit<UpdateDoctorProfileDto, 'id' | 'staffAccountId'>,
-  ): Promise<DoctorProfileResponseDto> {
-    const doctor = await this.doctorRepo.findOneByStaffAccountId({
-      staffAccountId,
-    });
-    if (!doctor) {
-      throw new NotFoundError(
-        `Doctor profile with staff account ID ${staffAccountId} not found`,
-      );
-    }
-    return this.update(doctor.id, updateDoctorDto);
   }
 
   async remove(id: string): Promise<DoctorProfileResponseDto> {
@@ -258,6 +250,49 @@ export class DoctorsService {
     }
 
     return doctor;
+  }
+
+  /**
+   * Sync doctor profile fields from account service
+   * Called by orchestrator when account fullName or isMale changes
+   */
+  async syncProfileFromAccount(payload: {
+    staffAccountId: string;
+    fullName?: string;
+    isMale?: boolean;
+  }): Promise<DoctorProfileResponseDto> {
+    const doctor = await this.doctorRepo.findOneByStaffAccountId({
+      staffAccountId: payload.staffAccountId,
+    });
+
+    if (!doctor) {
+      throw new NotFoundError(
+        `Doctor profile with staff account ID ${payload.staffAccountId} not found`,
+      );
+    }
+
+    // Update only the denormalized fields
+    const updateData: any = {};
+    if (payload.fullName !== undefined) {
+      updateData.fullName = payload.fullName;
+    }
+    if (payload.isMale !== undefined) {
+      updateData.isMale = payload.isMale;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const result = await this.doctorRepo.update(doctor.id, updateData);
+
+    // Synchronous cache invalidation
+    await this.doctorCacheInvalidation.invalidateByStaffAccountId(
+      result.staffAccountId,
+    );
+
+    this.logger.log(
+      `Synced profile for doctor ${doctor.id}: fullName=${payload.fullName}, isMale=${payload.isMale}`,
+    );
+
+    return result;
   }
 
   /**

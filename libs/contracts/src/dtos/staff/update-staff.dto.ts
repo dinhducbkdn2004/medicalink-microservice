@@ -63,4 +63,8 @@ export class UpdateStaffDto {
     { message: 'Please provide a valid date format (YYYY-MM-DD)' },
   )
   dateOfBirth?: Date | null;
+
+  @IsOptional()
+  @IsCuid({ message: 'doctorId must be a valid CUID' })
+  doctorId?: string | null;
 }

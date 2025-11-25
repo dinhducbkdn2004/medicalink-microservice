@@ -7,6 +7,7 @@ import {
   StaffQueryDto,
 } from '@app/contracts';
 import { STAFFS_PATTERNS } from '@app/contracts/patterns';
+import { UpdateSelfAccountDto } from '@app/contracts/dtos/staff/update-self-account.dto';
 
 @Controller()
 export class StaffsController {
@@ -37,10 +38,20 @@ export class StaffsController {
     return this.staffsService.update(payload.id, payload.data);
   }
 
+  @MessagePattern(STAFFS_PATTERNS.UPDATE_SELF)
+  async updateSelf(
+    @Payload()
+    payload: {
+      staffAccountId: string;
+      data: UpdateSelfAccountDto;
+    },
+  ) {
+    return this.staffsService.update(payload.staffAccountId, payload.data);
+  }
+
   @MessagePattern(STAFFS_PATTERNS.REMOVE)
   async remove(@Payload() id: string) {
-    await this.staffsService.remove(id);
-    return { success: true, message: 'Staff member removed successfully' };
+    return this.staffsService.remove(id);
   }
 
   @MessagePattern(STAFFS_PATTERNS.STATS)

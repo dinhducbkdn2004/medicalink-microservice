@@ -105,14 +105,43 @@ export class DoctorRepository {
 
   async findAll(
     where: any = {},
-    include: any = {},
+    minimal: boolean = false,
   ): Promise<DoctorProfileResponseDto[]> {
     const results = await this.prisma.doctor.findMany({
       where,
-      include: {
-        doctorSpecialties: { include: { specialty: true } },
-        doctorWorkLocations: { include: { location: true } },
-        ...include,
+      select: {
+        // select all scalar fields of doctor (replace/add fields as needed)
+        id: true,
+        staffAccountId: true,
+        appointmentDuration: true,
+        avatarUrl: true,
+        isActive: true,
+        degree: true,
+        position: true,
+        createdAt: true,
+        updatedAt: true,
+        ...(minimal
+          ? {
+              fullName: true,
+              isMale: true,
+              introduction: true,
+              memberships: true,
+              awards: true,
+              research: true,
+              trainingProcess: true,
+              experience: true,
+            }
+          : {}),
+        doctorSpecialties: {
+          select: {
+            specialty: true,
+          },
+        },
+        doctorWorkLocations: {
+          select: {
+            location: true,
+          },
+        },
       },
     });
     return results.map((doctor) => this.transformDoctorResponse(doctor));
@@ -153,6 +182,19 @@ export class DoctorRepository {
       data: data.map((doctor) => this.transformDoctorResponse(doctor)),
       total,
     };
+  }
+
+  async hasWorkLocation(
+    doctorId: string,
+    locationId: string,
+  ): Promise<boolean> {
+    const count = await this.prisma.doctorWorkLocation.count({
+      where: {
+        doctorId,
+        locationId,
+      },
+    });
+    return count > 0;
   }
 
   /**

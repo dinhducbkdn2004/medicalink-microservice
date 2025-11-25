@@ -8,7 +8,6 @@ import {
   CreateAccountDto,
   UpdateStaffDto,
   StaffQueryDto,
-  StaffStatsDto,
   PaginatedResponse,
 } from '@app/contracts';
 import { RabbitMQService } from '@app/rabbitmq';
@@ -27,7 +26,6 @@ export class DoctorAccountsService {
   async findAll(
     query: StaffQueryDto,
   ): Promise<PaginatedResponse<StaffResponse>> {
-    // Force filter to only show doctors
     const doctorQuery = { ...query, role: 'DOCTOR' as StaffRole };
     const { data, total } = await this.staffRepository.findMany(doctorQuery);
 
@@ -97,7 +95,6 @@ export class DoctorAccountsService {
       );
     }
 
-    // Emit staff account created event for cache invalidation
     try {
       this.rabbitMQService.emitEvent(
         ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_CREATED,
@@ -141,9 +138,14 @@ export class DoctorAccountsService {
       }
     }
 
+    const profileFieldsChanged =
+      (doctorData.fullName &&
+        doctorData.fullName !== existingDoctor.fullName) ||
+      (doctorData.isMale !== undefined &&
+        doctorData.isMale !== existingDoctor.isMale);
+
     const doctor = await this.staffRepository.update(id, doctorData);
 
-    // Emit staff account updated event for cache invalidation
     try {
       this.rabbitMQService.emitEvent(
         ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_UPDATED,
@@ -157,6 +159,26 @@ export class DoctorAccountsService {
         `Failed to emit ${ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_UPDATED} event for doctor ${doctor.id}:`,
         error,
       );
+    }
+
+    if (profileFieldsChanged && existingDoctor.doctorId) {
+      try {
+        this.rabbitMQService.emitEvent(
+          ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_PROFILE_UPDATED,
+          {
+            staffId: doctor.id,
+            fullName: doctor.fullName,
+            isMale: doctor.isMale,
+            role: doctor.role,
+            updatedAt: doctor.updatedAt.toISOString(),
+          },
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to emit ${ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_PROFILE_UPDATED} event for doctor ${doctor.id}:`,
+          error,
+        );
+      }
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -175,7 +197,6 @@ export class DoctorAccountsService {
     const { passwordHash, ...result } =
       await this.staffRepository.softDelete(id);
 
-    // Emit staff account deleted event for cache invalidation
     try {
       this.rabbitMQService.emitEvent(
         ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_DELETED,
@@ -193,28 +214,6 @@ export class DoctorAccountsService {
     return result;
   }
 
-  async getStats(): Promise<StaffStatsDto> {
-    const query = { role: StaffRole.DOCTOR };
-    const { total } = await this.staffRepository.findMany(query);
-
-    const startOfWeek = new Date();
-    startOfWeek.setDate(startOfWeek.getDate() - 7);
-
-    return {
-      total,
-      byRole: {
-        DOCTOR: total,
-        ADMIN: 0,
-        SUPER_ADMIN: 0,
-      },
-      recentlyCreated: 0,
-      deleted: 0,
-    };
-  }
-
-  /**
-   * Manual permission assignment for existing doctors
-   */
   async assignPermissionsToUser(
     userId: string,
     roleOverride?: string,

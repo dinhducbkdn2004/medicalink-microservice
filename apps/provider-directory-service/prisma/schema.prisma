@@ -60,6 +60,8 @@ model WorkLocation {
 model Doctor {
   id              String   @id @default(cuid())
   staffAccountId  String   @unique @map("staff_account_id")
+  fullName        String   @map("full_name") @db.VarChar(100) @default("")  // Denormalized from accounts-service
+  isMale          Boolean? @map("is_male") @default(true)                  // Denormalized from accounts-service
   isActive        Boolean  @default(true) @map("is_active")
   degree          String?  @db.VarChar(100)
   position        String[]

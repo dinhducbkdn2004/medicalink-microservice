@@ -6,6 +6,7 @@ import { StaffsController } from './staffs.controller';
 import { StaffsService } from './staffs.service';
 import { StaffRepository } from './staff.repository';
 import { PermissionModule } from '../permission/permission.module';
+import { RabbitMQService } from '@app/rabbitmq';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { PermissionModule } from '../permission/permission.module';
     ]),
   ],
   controllers: [StaffsController],
-  providers: [StaffsService, StaffRepository],
+  providers: [StaffsService, StaffRepository, RabbitMQService],
   exports: [StaffsService, StaffRepository],
 })
 export class StaffsModule {}

@@ -27,6 +27,7 @@ import {
   PERMISSION_GROUP_PATTERNS,
   PERMISSION_PATTERNS,
 } from '@app/contracts/patterns/permission.patterns';
+import { SuccessMessage } from '../decorators/success-message.decorator';
 
 @Controller('permissions')
 export class PermissionsController {
@@ -73,6 +74,7 @@ export class PermissionsController {
   // Assign permission to user
   @RequirePermission('permissions', 'manage')
   @Post('users/assign')
+  @SuccessMessage('Permission assigned to user successfully')
   async assignUserPermission(@Body() dto: AssignUserPermissionDto) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
@@ -84,6 +86,7 @@ export class PermissionsController {
   // Revoke permission from user
   @RequirePermission('permissions', 'manage')
   @Delete('users/revoke')
+  @SuccessMessage('Permission revoked from user successfully')
   async revokeUserPermission(@Body() dto: RevokeUserPermissionDto) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
@@ -95,6 +98,7 @@ export class PermissionsController {
   // Check if user has specific permission
   @RequirePermission('permissions', 'manage')
   @Post('check')
+  @SuccessMessage('Permission checked successfully')
   async checkPermission(
     @Body()
     payload: {
@@ -126,6 +130,7 @@ export class PermissionsController {
   // Refresh user permission cache
   @RequirePermission('permissions', 'manage')
   @Post('users/:userId/refresh-cache')
+  @SuccessMessage('User permission cache refreshed successfully')
   async refreshUserPermissionCache(
     @Param('userId') userId: string,
     @Query('tenantId') tenantId?: string,
@@ -140,6 +145,7 @@ export class PermissionsController {
   // Invalidate user permission cache
   @RequirePermission('permissions', 'manage')
   @Delete('users/:userId/cache')
+  @SuccessMessage('User permission cache invalidated successfully')
   async invalidateUserPermissionCache(@Param('userId') userId: string) {
     return this.microserviceService.sendWithTimeout(
       this.accountsClient,
@@ -212,6 +218,7 @@ export class PermissionsController {
 
   @RequirePermission('permissions', 'manage')
   @Post('users/:userId/groups')
+  @SuccessMessage('User added to group successfully')
   async addUserToGroup(
     @Param('userId') userId: string,
     @Body() dto: Omit<AddUserToGroupDto, 'userId'>,
@@ -225,6 +232,7 @@ export class PermissionsController {
 
   @RequirePermission('permissions', 'manage')
   @Delete('users/:userId/groups/:groupId')
+  @SuccessMessage('User removed from group successfully')
   async removeUserFromGroup(
     @Param('userId') userId: string,
     @Param('groupId') groupId: string,
@@ -253,6 +261,7 @@ export class PermissionsController {
 
   @RequirePermission('permissions', 'manage')
   @Post('groups/:groupId/permissions')
+  @SuccessMessage('Group permission assigned successfully')
   async assignGroupPermission(
     @Param('groupId') groupId: string,
     @Body() dto: Omit<AssignGroupPermissionDto, 'groupId'>,
@@ -266,6 +275,7 @@ export class PermissionsController {
 
   @RequirePermission('permissions', 'manage')
   @Delete('groups/:groupId/permissions')
+  @SuccessMessage('Group permission revoked successfully')
   async revokeGroupPermission(
     @Param('groupId') groupId: string,
     @Body() dto: Omit<RevokeGroupPermissionDto, 'groupId'>,

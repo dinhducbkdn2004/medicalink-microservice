@@ -28,6 +28,7 @@ model StaffAccount {
   phone        String?   @db.VarChar(32)
   isMale       Boolean?  @map("is_male")
   dateOfBirth  DateTime? @map("date_of_birth") @db.Date
+  doctorId     String?   @unique @map("doctor_id") @db.VarChar(27) // Link to doctor profile in provider-directory-service
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
