@@ -1,6 +1,6 @@
 import { SafeValidationPipe } from '@app/contracts';
 import { BadRequestException, Logger } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import * as dotenv from 'dotenv';
 import { ApiGatewayModule } from './api-gateway.module';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
@@ -43,7 +43,8 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(new ResolvePromisesInterceptor());
+  const reflector = app.get(Reflector);
+  app.useGlobalInterceptors(new ResolvePromisesInterceptor(reflector));
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.enableCors();
   app.setGlobalPrefix('api');

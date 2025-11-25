@@ -69,14 +69,12 @@ export class PermissionController {
   // User Permission Management
   @MessagePattern(PERMISSION_PATTERNS.ASSIGN_USER_PERMISSION)
   async assignUserPermission(@Payload() dto: AssignUserPermissionDto) {
-    await this.permissionService.assignUserPermission(dto);
-    return { success: true, message: 'User permission assigned successfully' };
+    return this.permissionService.assignUserPermission(dto);
   }
 
   @MessagePattern(PERMISSION_PATTERNS.REVOKE_USER_PERMISSION)
   async revokeUserPermission(@Payload() dto: RevokeUserPermissionDto) {
-    await this.permissionService.revokeUserPermission(dto);
-    return { success: true, message: 'User permission revoked successfully' };
+    return this.permissionService.revokeUserPermission(dto);
   }
 
   // Group Management
@@ -103,8 +101,7 @@ export class PermissionController {
 
   @MessagePattern(PERMISSION_GROUP_PATTERNS.DELETE)
   async deleteGroup(@Payload() payload: { groupId: string }) {
-    await this.permissionService.deleteGroup(payload.groupId);
-    return { success: true, message: 'Group deleted successfully' };
+    return this.permissionService.deleteGroup(payload.groupId);
   }
 
   // User Group Management
@@ -120,14 +117,12 @@ export class PermissionController {
 
   @MessagePattern(PERMISSION_GROUP_PATTERNS.ADD_USER_TO_GROUP)
   async addUserToGroup(@Payload() dto: AddUserToGroupDto) {
-    await this.permissionService.addUserToGroup(dto);
-    return { success: true, message: 'User added to group successfully' };
+    return this.permissionService.addUserToGroup(dto);
   }
 
   @MessagePattern(PERMISSION_GROUP_PATTERNS.REMOVE_USER_FROM_GROUP)
   async removeUserFromGroup(@Payload() dto: RemoveUserFromGroupDto) {
-    await this.permissionService.removeUserFromGroup(dto);
-    return { success: true, message: 'User removed from group successfully' };
+    return this.permissionService.removeUserFromGroup(dto);
   }
 
   // Group Permission Management
@@ -143,14 +138,12 @@ export class PermissionController {
 
   @MessagePattern(PERMISSION_GROUP_PATTERNS.ASSIGN_GROUP_PERMISSION)
   async assignGroupPermission(@Payload() dto: AssignGroupPermissionDto) {
-    await this.permissionService.assignGroupPermission(dto);
-    return { success: true, message: 'Group permission assigned successfully' };
+    return this.permissionService.assignGroupPermission(dto);
   }
 
   @MessagePattern(PERMISSION_GROUP_PATTERNS.REVOKE_GROUP_PERMISSION)
   async revokeGroupPermission(@Payload() dto: RevokeGroupPermissionDto) {
-    await this.permissionService.revokeGroupPermission(dto);
-    return { success: true, message: 'Group permission revoked successfully' };
+    return this.permissionService.revokeGroupPermission(dto);
   }
 
   // Permission Management Stats

@@ -8,7 +8,6 @@ import {
   CancelAppointmentDto,
   ConfirmAppointmentDto,
   PaginatedResponse,
-  PostResponseDto,
 } from '@app/contracts/dtos';
 import { Appointment } from '../../prisma/generated/client';
 import {
@@ -65,39 +64,20 @@ export class AppointmentsController {
   @MessagePattern(BOOKING_PATTERNS.CANCEL_APPOINTMENT)
   async cancelAppointment(
     @Payload() dto: CancelAppointmentDto,
-  ): Promise<PostResponseDto<Appointment>> {
-    const result = await this.appointmentsService.cancelAppointment(dto);
-    return {
-      success: true,
-      message: 'Appointment cancelled successfully',
-      data: result,
-    };
+  ): Promise<Appointment> {
+    return this.appointmentsService.cancelAppointment(dto);
   }
 
   @MessagePattern(BOOKING_PATTERNS.CONFIRM_APPOINTMENT)
   async confirmAppointment(
     @Payload() dto: ConfirmAppointmentDto,
-  ): Promise<PostResponseDto<Appointment>> {
-    const result = await this.appointmentsService.confirmAppointment(dto);
-    return {
-      success: true,
-      message: 'Appointment confirmed successfully',
-      data: result,
-    };
+  ): Promise<Appointment> {
+    return this.appointmentsService.confirmAppointment(dto);
   }
 
   @MessagePattern(BOOKING_PATTERNS.COMPLETE_APPOINTMENT)
-  async completeAppointment(
-    @Payload() id: string,
-  ): Promise<PostResponseDto<Appointment>> {
-    const result = await this.appointmentsService.completeAppointment(
-      String(id),
-    );
-    return {
-      success: true,
-      message: 'Appointment completed successfully',
-      data: result,
-    };
+  async completeAppointment(@Payload() id: string): Promise<Appointment> {
+    return this.appointmentsService.completeAppointment(id);
   }
 
   @MessagePattern(BOOKING_PATTERNS.RESCHEDULE_APPOINTMENT)

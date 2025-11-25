@@ -39,8 +39,7 @@ export class StaffsController {
 
   @MessagePattern(STAFFS_PATTERNS.REMOVE)
   async remove(@Payload() id: string) {
-    await this.staffsService.remove(id);
-    return { success: true, message: 'Staff member removed successfully' };
+    return this.staffsService.remove(id);
   }
 
   @MessagePattern(STAFFS_PATTERNS.STATS)

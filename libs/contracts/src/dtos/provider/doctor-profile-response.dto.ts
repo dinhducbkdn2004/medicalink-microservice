@@ -3,6 +3,8 @@ import { SpecialtyDto, WorkLocationDto } from '../common';
 export class DoctorProfileResponseDto {
   id: string;
   staffAccountId: string;
+  fullName: string;
+  isMale?: boolean;
   isActive: boolean;
   appointmentDuration: number;
   degree?: string;

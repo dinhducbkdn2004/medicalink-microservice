@@ -5,10 +5,12 @@ import {
   NestInterceptor,
   Logger,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { map, mergeMap } from 'rxjs/operators';
 import { instanceToPlain } from 'class-transformer';
 import deepResolvePromises from '../utils/deep-resolver';
+import { SUCCESS_MESSAGE_METADATA_KEY } from '../decorators/success-message.decorator';
 
 export interface SerializedResponse<T = any> {
   success: boolean;
@@ -24,6 +26,8 @@ export interface SerializedResponse<T = any> {
 @Injectable()
 export class ResolvePromisesInterceptor implements NestInterceptor {
   private readonly logger = new Logger(ResolvePromisesInterceptor.name);
+
+  constructor(private readonly reflector: Reflector) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest();
@@ -48,6 +52,12 @@ export class ResolvePromisesInterceptor implements NestInterceptor {
           'success' in serializedData &&
           'message' in serializedData;
 
+        const handler = context.getHandler();
+        const controller = context.getClass();
+        const customMessage =
+          this.reflector.get<string>(SUCCESS_MESSAGE_METADATA_KEY, handler) ??
+          this.reflector.get<string>(SUCCESS_MESSAGE_METADATA_KEY, controller);
+
         const responseData =
           serializedData && ('data' in serializedData || isStandardResponse)
             ? serializedData.data
@@ -55,12 +65,14 @@ export class ResolvePromisesInterceptor implements NestInterceptor {
 
         const standardResponse: SerializedResponse = {
           success: true,
-          message: isStandardResponse
-            ? serializedData.message
-            : this.getSuccessMessage(
-                String(method),
-                Number(response.statusCode),
-              ),
+          message:
+            isStandardResponse && serializedData.message
+              ? serializedData.message
+              : (customMessage ??
+                this.getSuccessMessage(
+                  String(method),
+                  Number(response.statusCode),
+                )),
           data: responseData,
           timestamp: new Date().toISOString(),
           path: url,

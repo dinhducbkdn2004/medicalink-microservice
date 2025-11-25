@@ -20,4 +20,5 @@ export const DOCTOR_PROFILES_PATTERNS = {
   GET_PUBLIC_LIST: 'doctor-profiles.getPublicList',
   GET_BY_ACCOUNT_ID: 'doctor-profiles.getByAccountId',
   GET_BY_ACCOUNT_IDS: 'doctor-profiles.getByAccountIds',
+  SYNC_PROFILE_FROM_ACCOUNT: 'doctor-profiles.syncProfileFromAccount',
 };

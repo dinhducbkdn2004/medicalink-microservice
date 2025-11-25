@@ -88,10 +88,15 @@ export class DoctorOrchestratorService {
       {
         name: 'createProfile',
         execute: async (input) => {
+          // Copy fullName and isMale from account to profile
           const profile = await this.clientHelper.send<{ id: string }>(
             this.providerClient,
             DOCTOR_PROFILES_PATTERNS.CREATE_EMPTY,
-            { staffAccountId: input.account.id },
+            {
+              staffAccountId: input.account.id,
+              fullName: input.account.fullName,
+              isMale: input.account.isMale,
+            },
             { timeoutMs: 12000 },
           );
           return { ...input, profile };
@@ -102,13 +107,50 @@ export class DoctorOrchestratorService {
           try {
             await this.clientHelper.send(
               this.providerClient,
-              DOCTOR_ACCOUNTS_PATTERNS.REMOVE,
+              DOCTOR_PROFILES_PATTERNS.REMOVE,
               output.profile.id,
               { timeoutMs: 8000 },
             );
           } catch (error) {
             this.logger.error(
               'Failed to delete profile during compensation',
+              error,
+            );
+          }
+        },
+      },
+      {
+        name: 'linkAccountToProfile',
+        execute: async (input) => {
+          // Update account with doctorId to establish bidirectional link
+          await this.clientHelper.send<IStaffAccount>(
+            this.accountsClient,
+            DOCTOR_ACCOUNTS_PATTERNS.UPDATE,
+            {
+              id: input.account.id,
+              doctorId: input.profile.id,
+            },
+            { timeoutMs: 8000 },
+          );
+          return input;
+        },
+        compensate: async (output) => {
+          if (!output.account) return;
+
+          try {
+            // Remove the link by setting doctorId to null
+            await this.clientHelper.send(
+              this.accountsClient,
+              DOCTOR_ACCOUNTS_PATTERNS.UPDATE,
+              {
+                id: output.account.id,
+                doctorId: null,
+              },
+              { timeoutMs: 8000 },
+            );
+          } catch (error) {
+            this.logger.error(
+              'Failed to unlink account during compensation',
               error,
             );
           }

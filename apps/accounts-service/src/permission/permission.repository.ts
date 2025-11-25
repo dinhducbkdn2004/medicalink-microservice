@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuthVersionService } from '../auth-version/auth-version.service';
 import { AuthRepository } from '../auth/auth.repository';
 import {
+  BadRequestError,
   DomainError,
   ForbiddenError,
   fromUnknown,
@@ -819,6 +820,9 @@ export class PermissionRepository {
         },
       });
     } catch (error) {
+      if (error?.code === 'P2003') {
+        throw new BadRequestError('Permission not found');
+      }
       if (error instanceof ValidationError || error instanceof NotFoundError) {
         throw error;
       }

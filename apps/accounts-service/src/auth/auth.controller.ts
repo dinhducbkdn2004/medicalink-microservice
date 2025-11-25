@@ -72,11 +72,7 @@ export class AuthController {
       password: string;
     },
   ) {
-    await this.authService.verifyPassword(payload.email, payload.password);
-    return {
-      success: true,
-      message: 'Password verified successfully',
-    };
+    return this.authService.verifyPassword(payload.email, payload.password);
   }
 
   @MessagePattern(AUTH_PATTERNS.REQUEST_PASSWORD_RESET)

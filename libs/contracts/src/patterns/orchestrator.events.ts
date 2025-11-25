@@ -12,6 +12,7 @@ export const ORCHESTRATOR_EVENTS = {
   // Account events
   STAFF_ACCOUNT_CREATED: 'staff.account.created',
   STAFF_ACCOUNT_UPDATED: 'staff.account.updated',
+  STAFF_ACCOUNT_PROFILE_UPDATED: 'staff.account.profile.updated', // For syncing profile data to doctor
   STAFF_ACCOUNT_DELETED: 'staff.account.deleted',
 
   // Blog events

@@ -10,7 +10,6 @@ export const ORCHESTRATOR_PATTERNS = {
 
   // Doctor composition (read)
   DOCTOR_GET_COMPOSITE: 'orchestrator.doctor.getComposite',
-  DOCTOR_SEARCH_COMPOSITE: 'orchestrator.doctor.searchComposite',
   DOCTOR_LIST_COMPOSITE: 'orchestrator.doctor.listComposite',
 
   // Blog composition (read)
@@ -33,8 +32,4 @@ export const ORCHESTRATOR_PATTERNS = {
   // Appointment notification dispatch
   APPOINTMENT_NOTIFICATION_DISPATCH:
     'orchestrator.appointment.notification.dispatch',
-
-  // Cache management
-  CACHE_INVALIDATE: 'orchestrator.cache.invalidate',
-  CACHE_CLEAR: 'orchestrator.cache.clear',
 };

@@ -141,6 +141,13 @@ export class DoctorAccountsService {
       }
     }
 
+    // Check if profile fields (fullName or isMale) are being updated
+    const profileFieldsChanged =
+      (doctorData.fullName &&
+        doctorData.fullName !== existingDoctor.fullName) ||
+      (doctorData.isMale !== undefined &&
+        doctorData.isMale !== existingDoctor.isMale);
+
     const doctor = await this.staffRepository.update(id, doctorData);
 
     // Emit staff account updated event for cache invalidation
@@ -157,6 +164,27 @@ export class DoctorAccountsService {
         `Failed to emit ${ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_UPDATED} event for doctor ${doctor.id}:`,
         error,
       );
+    }
+
+    // Emit profile update event if fullName or isMale changed (for syncing to doctor profile)
+    if (profileFieldsChanged && existingDoctor.doctorId) {
+      try {
+        this.rabbitMQService.emitEvent(
+          ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_PROFILE_UPDATED,
+          {
+            staffId: doctor.id,
+            fullName: doctor.fullName,
+            isMale: doctor.isMale,
+            role: doctor.role,
+            updatedAt: doctor.updatedAt.toISOString(),
+          },
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to emit ${ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_PROFILE_UPDATED} event for doctor ${doctor.id}:`,
+          error,
+        );
+      }
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

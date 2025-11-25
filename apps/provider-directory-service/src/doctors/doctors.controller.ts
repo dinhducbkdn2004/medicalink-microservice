@@ -21,8 +21,15 @@ export class DoctorsController {
   }
 
   @MessagePattern(DOCTOR_PROFILES_PATTERNS.CREATE_EMPTY)
-  createEmpty(@Payload() payload: { staffAccountId: string }) {
-    return this.doctorsService.createEmpty(payload.staffAccountId);
+  createEmpty(
+    @Payload()
+    payload: {
+      staffAccountId: string;
+      fullName: string;
+      isMale: boolean;
+    },
+  ) {
+    return this.doctorsService.createEmpty(payload);
   }
 
   @MessagePattern(DOCTOR_PROFILES_PATTERNS.FIND_ONE)
@@ -49,7 +56,7 @@ export class DoctorsController {
       data: Omit<UpdateDoctorProfileDto, 'id' | 'staffAccountId'>;
     },
   ) {
-    return this.doctorsService.updateSelf(payload.staffAccountId, payload.data);
+    return this.doctorsService.update(payload.staffAccountId, payload.data);
   }
 
   @MessagePattern(DOCTOR_PROFILES_PATTERNS.REMOVE)
@@ -79,5 +86,17 @@ export class DoctorsController {
   @MessagePattern(DOCTOR_PROFILES_PATTERNS.GET_BY_ACCOUNT_IDS)
   getByAccountIds(@Payload() payload: GetDoctorsByAccountIdsDto) {
     return this.doctorsService.getByAccountIds(payload);
+  }
+
+  @MessagePattern(DOCTOR_PROFILES_PATTERNS.SYNC_PROFILE_FROM_ACCOUNT)
+  syncProfileFromAccount(
+    @Payload()
+    payload: {
+      staffAccountId: string;
+      fullName?: string;
+      isMale?: boolean;
+    },
+  ) {
+    return this.doctorsService.syncProfileFromAccount(payload);
   }
 }

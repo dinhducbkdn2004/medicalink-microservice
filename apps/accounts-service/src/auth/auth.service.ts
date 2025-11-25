@@ -2,18 +2,20 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ClientProxy } from '@nestjs/microservices';
-import { NotFoundError, UnauthorizedError } from '@app/domain-errors';
+import {
+  BadRequestError,
+  NotFoundError,
+  UnauthorizedError,
+} from '@app/domain-errors';
 import { AuthRepository } from './auth.repository';
 import { PasswordResetService } from './password-reset.service';
 import { AuthVersionService } from '../auth-version/auth-version.service';
 import { StaffAccount } from '../../prisma/generated/client';
 import {
   ChangePasswordDto,
-  ChangePasswordResponseDto,
   JwtPayloadDto,
   LoginResponseDto,
   RefreshTokenResponseDto,
-  PasswordResetResponseDto,
   RequestPasswordResetDto,
   VerifyResetCodeDto,
   ResetPasswordDto,
@@ -162,7 +164,7 @@ export class AuthService {
   async changePasswordWithValidation(
     staffId: string,
     changePasswordDto: ChangePasswordDto,
-  ): Promise<ChangePasswordResponseDto> {
+  ): Promise<void> {
     // Get the current staff record
     const staff = await this.authRepository.findById(staffId);
 
@@ -186,11 +188,6 @@ export class AuthService {
       10,
     );
     await this.authRepository.updatePassword(staffId, hashedNewPassword);
-
-    return {
-      success: true,
-      message: 'Password changed successfully',
-    };
   }
 
   async getStaffStatistics() {
@@ -221,24 +218,16 @@ export class AuthService {
     return true;
   }
 
-  /**
-   * Request a password reset - generates code and sends email
-   */
-  async requestPasswordReset(
-    dto: RequestPasswordResetDto,
-  ): Promise<PasswordResetResponseDto> {
+  async requestPasswordReset(dto: RequestPasswordResetDto): Promise<void> {
     const email = dto.email.toLowerCase();
 
-    // Check if staff account exists (but don't reveal if it doesn't for security)
     const staff = await this.authRepository.findByEmail(email);
 
     if (staff && !staff.deletedAt) {
       try {
-        // Generate and store reset code
         const resetCode =
           await this.passwordResetService.createResetCode(email);
 
-        // Send email notification via RabbitMQ
         const eventPayload = {
           email: staff.email,
           fullName: staff.fullName,
@@ -254,82 +243,46 @@ export class AuthService {
                 `Failed to emit password reset email event: ${err.message}`,
               ),
           });
-
-        this.logger.log(`Password reset requested for email: ${email}`);
       } catch (error) {
-        // If it's a rate limit error, throw it
         if (error.message && error.message.includes('Too many')) {
           throw error;
         }
-        // For other errors, log but don't reveal to user
         this.logger.error(
           `Password reset error for ${email}: ${error.message}`,
         );
       }
     }
-
-    // Always return success message for security (don't reveal if email exists)
-    return {
-      success: true,
-      message:
-        'If an account exists with this email, a password reset code has been sent.',
-    };
   }
 
-  /**
-   * Verify a password reset code (optional endpoint for UI feedback)
-   */
-  async verifyResetCode(
-    dto: VerifyResetCodeDto,
-  ): Promise<PasswordResetResponseDto> {
+  async verifyResetCode(dto: VerifyResetCodeDto): Promise<void> {
     const email = dto.email.toLowerCase();
     const isValid = await this.passwordResetService.verifyResetCode(
       email,
       dto.code,
     );
 
-    return {
-      success: isValid,
-      message: 'Reset code verified successfully.',
-    };
+    if (!isValid) {
+      throw new BadRequestError('Invalid reset code');
+    }
   }
 
-  /**
-   * Reset password using the verification code
-   */
-  async resetPassword(
-    dto: ResetPasswordDto,
-  ): Promise<PasswordResetResponseDto> {
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
     const email = dto.email.toLowerCase();
 
-    // Verify the reset code
     await this.passwordResetService.verifyResetCode(email, dto.code);
 
-    // Find the staff account
     const staff = await this.authRepository.findByEmail(email);
 
     if (!staff || staff.deletedAt) {
       throw new NotFoundError('Account not found');
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
 
-    // Update password
     await this.authRepository.updatePassword(staff.id, hashedPassword);
 
-    // Invalidate the reset code
     await this.passwordResetService.invalidateResetCode(email);
 
-    // Increment auth version to invalidate all existing sessions
     await this.authVersionService.incrementUserAuthVersion(staff.id);
-
-    this.logger.log(`Password reset completed for email: ${email}`);
-
-    return {
-      success: true,
-      message:
-        'Password has been reset successfully. Please log in with your new password.',
-    };
   }
 }
