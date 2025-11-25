@@ -7,11 +7,15 @@ import {
   OfficeHoursResponseDto,
   UpdateOfficeHoursDto,
 } from '@app/contracts';
-import { NotFoundError } from '@app/domain-errors';
+import { BadRequestError, NotFoundError } from '@app/domain-errors';
+import { DoctorRepository } from '../doctors/doctor.repository';
 
 @Injectable()
 export class OfficeHoursService {
-  constructor(private readonly repo: OfficeHoursRepository) {}
+  constructor(
+    private readonly repo: OfficeHoursRepository,
+    private readonly doctorRepo: DoctorRepository,
+  ) {}
 
   async findAll(query: OfficeHoursQueryDto) {
     const { doctorId, workLocationId } = query;
@@ -67,7 +71,19 @@ export class OfficeHoursService {
   }
 
   async findPriority(query: OfficeHoursQueryDto) {
-    const { doctorId, workLocationId } = query;
+    const { doctorId, workLocationId, strict } = query;
+
+    if (strict && doctorId && workLocationId) {
+      const isLinked = await this.doctorRepo.hasWorkLocation(
+        doctorId,
+        workLocationId,
+      );
+      if (!isLinked) {
+        throw new BadRequestError(
+          'Doctor is not assigned to the specified work location',
+        );
+      }
+    }
 
     if (doctorId && workLocationId) {
       const tier1 = await this.findWithDoctorAndLocation({

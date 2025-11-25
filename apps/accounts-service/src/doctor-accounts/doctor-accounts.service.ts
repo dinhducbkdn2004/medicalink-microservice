@@ -8,7 +8,6 @@ import {
   CreateAccountDto,
   UpdateStaffDto,
   StaffQueryDto,
-  StaffStatsDto,
   PaginatedResponse,
 } from '@app/contracts';
 import { RabbitMQService } from '@app/rabbitmq';
@@ -27,7 +26,6 @@ export class DoctorAccountsService {
   async findAll(
     query: StaffQueryDto,
   ): Promise<PaginatedResponse<StaffResponse>> {
-    // Force filter to only show doctors
     const doctorQuery = { ...query, role: 'DOCTOR' as StaffRole };
     const { data, total } = await this.staffRepository.findMany(doctorQuery);
 
@@ -97,7 +95,6 @@ export class DoctorAccountsService {
       );
     }
 
-    // Emit staff account created event for cache invalidation
     try {
       this.rabbitMQService.emitEvent(
         ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_CREATED,
@@ -141,7 +138,6 @@ export class DoctorAccountsService {
       }
     }
 
-    // Check if profile fields (fullName or isMale) are being updated
     const profileFieldsChanged =
       (doctorData.fullName &&
         doctorData.fullName !== existingDoctor.fullName) ||
@@ -150,7 +146,6 @@ export class DoctorAccountsService {
 
     const doctor = await this.staffRepository.update(id, doctorData);
 
-    // Emit staff account updated event for cache invalidation
     try {
       this.rabbitMQService.emitEvent(
         ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_UPDATED,
@@ -166,7 +161,6 @@ export class DoctorAccountsService {
       );
     }
 
-    // Emit profile update event if fullName or isMale changed (for syncing to doctor profile)
     if (profileFieldsChanged && existingDoctor.doctorId) {
       try {
         this.rabbitMQService.emitEvent(
@@ -203,7 +197,6 @@ export class DoctorAccountsService {
     const { passwordHash, ...result } =
       await this.staffRepository.softDelete(id);
 
-    // Emit staff account deleted event for cache invalidation
     try {
       this.rabbitMQService.emitEvent(
         ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_DELETED,
@@ -221,28 +214,6 @@ export class DoctorAccountsService {
     return result;
   }
 
-  async getStats(): Promise<StaffStatsDto> {
-    const query = { role: StaffRole.DOCTOR };
-    const { total } = await this.staffRepository.findMany(query);
-
-    const startOfWeek = new Date();
-    startOfWeek.setDate(startOfWeek.getDate() - 7);
-
-    return {
-      total,
-      byRole: {
-        DOCTOR: total,
-        ADMIN: 0,
-        SUPER_ADMIN: 0,
-      },
-      recentlyCreated: 0,
-      deleted: 0,
-    };
-  }
-
-  /**
-   * Manual permission assignment for existing doctors
-   */
   async assignPermissionsToUser(
     userId: string,
     roleOverride?: string,

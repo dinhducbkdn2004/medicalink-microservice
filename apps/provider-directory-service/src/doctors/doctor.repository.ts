@@ -184,6 +184,19 @@ export class DoctorRepository {
     };
   }
 
+  async hasWorkLocation(
+    doctorId: string,
+    locationId: string,
+  ): Promise<boolean> {
+    const count = await this.prisma.doctorWorkLocation.count({
+      where: {
+        doctorId,
+        locationId,
+      },
+    });
+    return count > 0;
+  }
+
   /**
    * Fetch minimal doctor profiles by IDs with lightweight select
    */

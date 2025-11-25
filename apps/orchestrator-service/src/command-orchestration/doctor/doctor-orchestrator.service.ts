@@ -128,7 +128,9 @@ export class DoctorOrchestratorService {
             DOCTOR_ACCOUNTS_PATTERNS.UPDATE,
             {
               id: input.account.id,
-              doctorId: input.profile.id,
+              data: {
+                doctorId: input.profile.id,
+              },
             },
             { timeoutMs: 8000 },
           );
@@ -144,7 +146,9 @@ export class DoctorOrchestratorService {
               DOCTOR_ACCOUNTS_PATTERNS.UPDATE,
               {
                 id: output.account.id,
-                doctorId: null,
+                data: {
+                  doctorId: null,
+                },
               },
               { timeoutMs: 8000 },
             );

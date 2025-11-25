@@ -148,6 +148,10 @@ export class StaffRepository {
       updateData.role = data.role;
     }
 
+    if (data.doctorId) {
+      updateData.doctorId = data.doctorId;
+    }
+
     return this.prisma.staffAccount.update({
       where: { id },
       data: updateData,

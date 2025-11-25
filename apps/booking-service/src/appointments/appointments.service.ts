@@ -482,6 +482,7 @@ export class AppointmentsService {
             locationId,
             serviceDate,
             durationMinutes,
+            strict: true,
           })
           .pipe(timeout(10000)),
       );

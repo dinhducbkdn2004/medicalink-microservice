@@ -175,6 +175,7 @@ export class DoctorProfileController {
       ORCHESTRATOR_PATTERNS.SCHEDULE_SLOTS_LIST,
       {
         doctorId: id,
+        strict: true,
         ...query,
       },
       { timeoutMs: 12000 },

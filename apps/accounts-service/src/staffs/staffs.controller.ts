@@ -7,6 +7,7 @@ import {
   StaffQueryDto,
 } from '@app/contracts';
 import { STAFFS_PATTERNS } from '@app/contracts/patterns';
+import { UpdateSelfAccountDto } from '@app/contracts/dtos/staff/update-self-account.dto';
 
 @Controller()
 export class StaffsController {
@@ -35,6 +36,17 @@ export class StaffsController {
   @MessagePattern(STAFFS_PATTERNS.UPDATE)
   async update(@Payload() payload: { id: string; data: UpdateStaffDto }) {
     return this.staffsService.update(payload.id, payload.data);
+  }
+
+  @MessagePattern(STAFFS_PATTERNS.UPDATE_SELF)
+  async updateSelf(
+    @Payload()
+    payload: {
+      staffAccountId: string;
+      data: UpdateSelfAccountDto;
+    },
+  ) {
+    return this.staffsService.update(payload.staffAccountId, payload.data);
   }
 
   @MessagePattern(STAFFS_PATTERNS.REMOVE)

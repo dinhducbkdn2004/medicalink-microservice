@@ -56,7 +56,11 @@ export class DoctorsController {
       data: Omit<UpdateDoctorProfileDto, 'id' | 'staffAccountId'>;
     },
   ) {
-    return this.doctorsService.update(payload.staffAccountId, payload.data);
+    return this.doctorsService.update(
+      payload.staffAccountId,
+      payload.data,
+      true,
+    );
   }
 
   @MessagePattern(DOCTOR_PROFILES_PATTERNS.REMOVE)

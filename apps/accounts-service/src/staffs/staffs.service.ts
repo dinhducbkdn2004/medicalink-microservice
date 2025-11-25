@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { ConflictError, NotFoundError } from '@app/domain-errors';
@@ -12,7 +13,11 @@ import {
   StaffStatsDto,
   PaginatedResponse,
 } from '@app/contracts';
-import { NOTIFICATION_PATTERNS } from '@app/contracts/patterns';
+import {
+  NOTIFICATION_PATTERNS,
+  ORCHESTRATOR_EVENTS,
+} from '@app/contracts/patterns';
+import { RabbitMQService } from '@app/rabbitmq';
 
 @Injectable()
 export class StaffsService {
@@ -23,6 +28,7 @@ export class StaffsService {
     private readonly permissionAssignmentService: PermissionAssignmentService,
     @Inject('NOTIFICATION_SERVICE')
     private readonly notificationClient: ClientProxy,
+    private readonly rabbitMQService: RabbitMQService,
   ) {}
 
   async findAll(
@@ -36,7 +42,6 @@ export class StaffsService {
     const { page = 1, limit = 10 } = query;
 
     const staffResponses: StaffResponse[] = data.map((staff) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { passwordHash, ...rest } = staff;
       return rest;
     });
@@ -60,7 +65,6 @@ export class StaffsService {
     if (!staff) {
       throw new NotFoundError('Staff member not found');
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...result } = staff;
     return result;
   }
@@ -72,7 +76,6 @@ export class StaffsService {
   }
 
   async create(createAccountDto: CreateAccountDto): Promise<StaffResponse> {
-    // Check if email already exists
     const existingStaff = await this.staffRepository.findByEmail(
       createAccountDto.email,
     );
@@ -81,7 +84,6 @@ export class StaffsService {
       throw new ConflictError('Email already exists');
     }
 
-    // Create staff account
     const staff = await this.staffRepository.create(createAccountDto);
 
     try {
@@ -113,7 +115,6 @@ export class StaffsService {
           ),
       });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...result } = staff;
     return result;
   }
@@ -122,14 +123,12 @@ export class StaffsService {
     id: string,
     updateStaffDto: UpdateStaffDto,
   ): Promise<StaffResponse> {
-    // Check if staff exists
     const existingStaff = await this.staffRepository.findById(id);
 
     if (!existingStaff) {
       throw new NotFoundError('Staff member not found');
     }
 
-    // Check if email is being updated and already exists
     if (updateStaffDto.email && updateStaffDto.email !== existingStaff.email) {
       const staffWithEmail = await this.staffRepository.findByEmail(
         updateStaffDto.email,
@@ -141,13 +140,48 @@ export class StaffsService {
     }
 
     const staff = await this.staffRepository.update(id, updateStaffDto);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
+    if (existingStaff.role === StaffRole.DOCTOR) {
+      try {
+        this.rabbitMQService.emitEvent(
+          ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_UPDATED,
+          {
+            id: staff.id,
+            role: staff.role,
+          },
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to emit ${ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_UPDATED} event for staff ${staff.id}:`,
+          error,
+        );
+      }
+
+      if (updateStaffDto.fullName || updateStaffDto.isMale) {
+        try {
+          this.rabbitMQService.emitEvent(
+            ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_PROFILE_UPDATED,
+            {
+              staffId: staff.id,
+              fullName: staff.fullName,
+              isMale: staff.isMale,
+              role: staff.role,
+              updatedAt: staff.updatedAt.toISOString(),
+            },
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to emit ${ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_PROFILE_UPDATED} event for staff ${staff.id}:`,
+            error,
+          );
+        }
+      }
+    }
     const { passwordHash, ...result } = staff;
     return result;
   }
 
   async remove(id: string): Promise<void> {
-    // Check if staff exists
     const existingStaff = await this.staffRepository.findById(id);
 
     if (!existingStaff) {
@@ -161,15 +195,11 @@ export class StaffsService {
     return await this.staffRepository.getStats();
   }
 
-  /**
-   * Manual permission assignment for existing staff
-   */
   async assignPermissionsToUser(
     userId: string,
     roleOverride?: string,
   ): Promise<{ success: boolean; message: string }> {
     try {
-      // Get staff to determine role
       const staff = await this.staffRepository.findById(userId);
 
       if (!staff) {

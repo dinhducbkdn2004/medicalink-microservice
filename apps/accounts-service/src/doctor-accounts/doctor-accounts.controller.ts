@@ -5,7 +5,6 @@ import {
   CreateAccountDto,
   UpdateStaffDto,
   StaffQueryDto,
-  StaffStatsDto,
 } from '@app/contracts/dtos/staff';
 import { PaginatedResponse } from '@app/contracts/dtos/common';
 import { StaffResponse } from '../staffs/interfaces';
@@ -44,11 +43,6 @@ export class DoctorAccountsController {
   @MessagePattern(DOCTOR_ACCOUNTS_PATTERNS.REMOVE)
   async remove(@Payload() id: string): Promise<StaffResponse> {
     return await this.doctorAccountsService.remove(id);
-  }
-
-  @MessagePattern(DOCTOR_ACCOUNTS_PATTERNS.STATS)
-  async getStats(): Promise<StaffStatsDto> {
-    return await this.doctorAccountsService.getStats();
   }
 
   @MessagePattern(DOCTOR_ACCOUNTS_PATTERNS.ASSIGN_PERMISSIONS)

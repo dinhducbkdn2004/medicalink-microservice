@@ -18,6 +18,7 @@ import {
   getUtcDayOfWeek,
   toUtcDate,
 } from '@app/commons/utils';
+import { BadRequestError } from '@app/domain-errors';
 
 @Injectable()
 export class ScheduleCompositeService {
@@ -58,10 +59,10 @@ export class ScheduleCompositeService {
    * Composes schedules from provider directory, booked appointments, and active holds.
    */
   async listSlots(query: ScheduleSlotsQueryDto): Promise<ScheduleSlotDto[]> {
-    const { doctorId, serviceDate, locationId, allowPast } = query;
+    const { doctorId, serviceDate, locationId, allowPast, strict } = query;
 
     if (!doctorId || !serviceDate) {
-      throw new Error('doctorId and serviceDate are required');
+      throw new BadRequestError('doctorId and serviceDate are required');
     }
 
     if (!allowPast) {
@@ -97,6 +98,7 @@ export class ScheduleCompositeService {
       {
         doctorId,
         workLocationId: locationId,
+        strict,
       },
       { timeoutMs: TIMEOUTS.SERVICE_CALL },
     );

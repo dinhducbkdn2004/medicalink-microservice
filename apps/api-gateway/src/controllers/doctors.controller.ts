@@ -15,7 +15,6 @@ import {
   CreateAccountDto,
   UpdateStaffDto,
   StaffQueryDto,
-  StaffStatsDto,
   RequireReadPermission,
   RequireUpdatePermission,
   RequireDeletePermission,
@@ -56,16 +55,6 @@ export class DoctorsController {
       data: result.data,
       meta: result.meta,
     };
-  }
-
-  @RequireReadPermission('doctors')
-  @Get('stats')
-  async getStats(): Promise<StaffStatsDto> {
-    return this.microserviceService.sendWithTimeout<StaffStatsDto>(
-      this.accountsClient,
-      DOCTOR_ACCOUNTS_PATTERNS.STATS,
-      {},
-    );
   }
 
   @RequireReadPermission('doctors')

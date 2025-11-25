@@ -4,7 +4,6 @@ export const DOCTOR_ACCOUNTS_PATTERNS = {
   CREATE: 'doctor-accounts.create',
   UPDATE: 'doctor-accounts.update',
   REMOVE: 'doctor-accounts.remove',
-  STATS: 'doctor-accounts.stats',
   ASSIGN_PERMISSIONS: 'doctor-accounts.assignPermissions',
 };
 
