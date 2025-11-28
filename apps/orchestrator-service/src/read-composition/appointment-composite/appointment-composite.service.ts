@@ -55,16 +55,16 @@ export class AppointmentCompositeService {
     // 3) Fetch doctor profiles in one call -> get staffAccountIds
     const profiles = await this.clientHelper
       .send<
-        any[]
+        Partial<DoctorProfileResponseDto>[]
       >(this.providerClient, DOCTOR_PROFILES_PATTERNS.GET_BY_IDS, { ids: doctorProfileIds }, { timeoutMs: 8000 })
       .catch(() => []);
 
-    const profileById = new Map<string, any>();
+    const profileById = new Map<string, Partial<DoctorProfileResponseDto>>();
     const staffIds: string[] = [];
-    profiles.forEach((p) => {
+    profiles.forEach((p: Partial<DoctorProfileResponseDto>) => {
       if (p?.id) {
-        profileById.set(p.id as string, p);
-        if (p.staffAccountId) staffIds.push(p.staffAccountId as string);
+        profileById.set(p.id, p);
+        if (p.staffAccountId) staffIds.push(p.staffAccountId);
       }
     });
 
@@ -87,7 +87,7 @@ export class AppointmentCompositeService {
     const enriched: AppointmentWithDoctor[] = appointments.map((a: any) => {
       const prof = a?.doctorId ? profileById.get(a.doctorId as string) : null;
       const name = prof?.staffAccountId
-        ? staffNameById.get(prof.staffAccountId as string)
+        ? staffNameById.get(prof.staffAccountId)
         : null;
       return { ...a, doctor: { ...prof, name: name ?? null } };
     });

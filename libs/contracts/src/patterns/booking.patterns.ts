@@ -25,4 +25,8 @@ export const BOOKING_PATTERNS = {
   LIST_EVENTS_BY_FILTER: 'booking.event.listByFilter',
   CREATE_EVENT_TEMP: 'booking.event.createTemp',
   CREATE_APPOINTMENT_FROM_EVENT: 'booking.appointment.createFromEvent',
+  // Stats
+  REVENUE_STATS: 'booking.stats.revenue',
+  REVENUE_BY_DOCTOR_STATS: 'booking.stats.revenueByDoctor',
+  APPOINTMENT_OVERVIEW_STATS: 'booking.stats.appointmentsOverview',
 };

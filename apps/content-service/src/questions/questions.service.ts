@@ -8,6 +8,7 @@ import {
   UpdateAnswerDto,
   GetQuestionsQueryDto,
 } from '@app/contracts/dtos/content';
+import { QAStatsOverviewDto } from '@app/contracts';
 import { AssetsMaintenanceService } from '../assets/assets-maintenance.service';
 import { NotFoundError } from '@app/domain-errors';
 import { SCreateAnswerDto } from './dtos/s-create-answer-dto';
@@ -159,5 +160,9 @@ export class QuestionsService {
       throw new NotFoundError('Answer not found');
     }
     await this.questionRepository.deleteAnswer(id);
+  }
+
+  async getQaOverview(): Promise<QAStatsOverviewDto> {
+    return this.questionRepository.getQaOverview();
   }
 }

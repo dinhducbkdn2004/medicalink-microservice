@@ -202,7 +202,7 @@ export class AuthService {
     };
   }
 
-  async verifyPassword(email: string, password: string): Promise<boolean> {
+  async verifyPassword(email: string, password: string): Promise<void> {
     const staff = await this.authRepository.findByEmail(email);
 
     if (!staff) {
@@ -214,8 +214,6 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedError('Password incorrect');
     }
-
-    return true;
   }
 
   async requestPasswordReset(dto: RequestPasswordResetDto): Promise<void> {

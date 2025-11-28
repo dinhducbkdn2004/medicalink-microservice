@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ReviewsService } from './reviews.service';
-import { CreateReviewDto } from '@app/contracts';
+import { CreateReviewDto, ReviewOverviewStatsDto } from '@app/contracts';
 import { REVIEWS_PATTERNS } from '@app/contracts/patterns';
 
 @Controller('reviews')
@@ -35,5 +35,10 @@ export class ReviewsController {
   @MessagePattern(REVIEWS_PATTERNS.DELETE)
   async deleteReview(@Payload() payload: { id: string }) {
     return this.reviewsService.deleteReview(payload.id);
+  }
+
+  @MessagePattern(REVIEWS_PATTERNS.STATS_OVERVIEW)
+  async getReviewOverview(): Promise<ReviewOverviewStatsDto> {
+    return this.reviewsService.getReviewOverview();
   }
 }

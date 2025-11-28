@@ -11,6 +11,7 @@ import { DoctorCompositeModule } from './read-composition/doctor-composite/docto
 import { BlogCompositeModule } from './read-composition/blog-composite/blog-composite.module';
 import { ScheduleCompositeModule } from './read-composition/schedule-composite/schedule-composite.module';
 import { AppointmentCompositeModule } from './read-composition/appointment-composite/appointment-composite.module';
+import { StatsCompositeModule } from './read-composition/stats-composite/stats-composite.module';
 import { EventHandlersModule } from './event-handlers/event-handlers.module';
 import { SchedulersModule } from './schedulers/schedulers.module';
 import { ServicesModule } from './services/services.module';
@@ -31,6 +32,7 @@ import { ServicesModule } from './services/services.module';
     BlogCompositeModule,
     ScheduleCompositeModule,
     AppointmentCompositeModule,
+    StatsCompositeModule,
     EventHandlersModule,
     SchedulersModule,
     ServicesModule,

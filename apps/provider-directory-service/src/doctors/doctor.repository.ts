@@ -204,6 +204,7 @@ export class DoctorRepository {
     {
       id: string;
       staffAccountId: string;
+      fullName: string;
       isActive: boolean;
       avatarUrl?: string | null;
     }[]
@@ -214,6 +215,7 @@ export class DoctorRepository {
       select: {
         id: true,
         staffAccountId: true,
+        fullName: true,
         isActive: true,
         avatarUrl: true,
       },

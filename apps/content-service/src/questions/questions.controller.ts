@@ -8,6 +8,7 @@ import {
   GetQuestionsQueryDto,
 } from '@app/contracts/dtos/content';
 import { QUESTIONS_PATTERNS, ANSWERS_PATTERNS } from '@app/contracts/patterns';
+import { QAStatsOverviewDto } from '@app/contracts';
 import { SCreateAnswerDto } from './dtos/s-create-answer-dto';
 
 @Controller()
@@ -99,5 +100,10 @@ export class QuestionsController {
   @MessagePattern(ANSWERS_PATTERNS.DELETE)
   deleteAnswer(@Payload() data: { id: string }) {
     return this.questionsService.deleteAnswer(data.id);
+  }
+
+  @MessagePattern(QUESTIONS_PATTERNS.STATS_OVERVIEW)
+  getQaOverview(): Promise<QAStatsOverviewDto> {
+    return this.questionsService.getQaOverview();
   }
 }

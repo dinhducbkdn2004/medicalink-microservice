@@ -1,6 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ReviewRepository } from './review.repository';
-import { CreateReviewDto, ReviewResponseDto } from '@app/contracts';
+import {
+  CreateReviewDto,
+  ReviewResponseDto,
+  ReviewOverviewStatsDto,
+} from '@app/contracts';
 import { AssetsMaintenanceService } from '../assets/assets-maintenance.service';
 import { NotFoundError } from '@app/domain-errors';
 import { DOCTOR_PROFILES_PATTERNS } from '@app/contracts/patterns';
@@ -81,6 +85,10 @@ export class ReviewsService {
     await this.assetsMaintenance.cleanupEntityAssets(publicIds);
 
     await this.reviewRepository.deleteReview(id);
+  }
+
+  async getReviewOverview(): Promise<ReviewOverviewStatsDto> {
+    return this.reviewRepository.getReviewOverview();
   }
 
   private async ensureDoctorExists(doctorId: string): Promise<void> {

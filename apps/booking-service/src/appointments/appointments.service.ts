@@ -17,6 +17,9 @@ import {
   CancelAppointmentDto,
   ConfirmAppointmentDto,
   PaginatedResponse,
+  RevenueStatsItem,
+  RevenueByDoctorStatsItem,
+  AppointmentStatsOverviewDto,
 } from '@app/contracts';
 import {
   DOCTOR_PROFILES_PATTERNS,
@@ -273,6 +276,216 @@ export class AppointmentsService {
     return this.prisma.event.findMany({ where });
   }
 
+  async getRevenueStats(): Promise<RevenueStatsItem[]> {
+    const endOfCurrentMonth = dayjs().endOf('month');
+    const startOfRange = endOfCurrentMonth
+      .clone()
+      .subtract(11, 'month')
+      .startOf('month');
+
+    const rangeStartDate = startOfRange.toDate();
+    const rangeEndDate = endOfCurrentMonth.clone().endOf('month').toDate();
+
+    const rows = await this.prisma.$queryRaw<
+      {
+        month: Date | null;
+        currency: string | null;
+        total: Prisma.Decimal | number | bigint | string | null;
+      }[]
+    >`
+      SELECT
+        date_trunc('month', e."service_date") AS month,
+        UPPER(COALESCE(a."currency", 'UNKNOWN')) AS currency,
+        COALESCE(SUM(COALESCE(a."price_amount", 0)), 0) AS total
+      FROM "appointments" a
+      INNER JOIN "events" e ON e."id" = a."event_id"
+      WHERE a."status"::text = ${AppointmentStatus.COMPLETED}
+        AND e."service_date" BETWEEN ${rangeStartDate} AND ${rangeEndDate}
+      GROUP BY 1, 2
+      ORDER BY 1 ASC, 2 ASC;
+    `;
+
+    const totalsByMonth = new Map<string, Map<string, number>>();
+    for (const row of rows) {
+      if (!row.month || !row.currency) {
+        continue;
+      }
+      const monthKey = dayjs(row.month).format('YYYY-MM');
+      const monthTotals =
+        totalsByMonth.get(monthKey) ?? new Map<string, number>();
+      monthTotals.set(
+        row.currency,
+        (monthTotals.get(row.currency) ?? 0) + this.normalizeDecimal(row.total),
+      );
+      totalsByMonth.set(monthKey, monthTotals);
+    }
+
+    const stats: RevenueStatsItem[] = [];
+    for (let offset = 0; offset < 12; offset++) {
+      const month = startOfRange.clone().add(offset, 'month');
+      const monthKey = month.format('YYYY-MM');
+      const monthTotals = totalsByMonth.get(monthKey);
+      const totalRecord: Record<string, number> = {};
+      if (monthTotals) {
+        for (const [currency, value] of monthTotals.entries()) {
+          totalRecord[currency] = Math.round(value * 100) / 100;
+        }
+      }
+      if (Object.keys(totalRecord).length === 0) {
+        totalRecord.VND = 0;
+      }
+      stats.push({
+        name: month.format('MMM YYYY'),
+        total: totalRecord,
+      });
+    }
+
+    return stats;
+  }
+
+  async getRevenueByDoctorStats(
+    limit?: number,
+  ): Promise<RevenueByDoctorStatsItem[]> {
+    const safeLimit = this.normalizeLimit(limit);
+    const endOfCurrentMonth = dayjs().endOf('month');
+    const startOfRange = endOfCurrentMonth
+      .clone()
+      .subtract(11, 'month')
+      .startOf('month');
+
+    const rangeStartDate = startOfRange.toDate();
+    const rangeEndDate = endOfCurrentMonth.clone().endOf('month').toDate();
+
+    const rows = await this.prisma.$queryRaw<
+      {
+        doctorId: string | null;
+        currency: string | null;
+        total: Prisma.Decimal | number | bigint | string | null;
+        grandTotal: Prisma.Decimal | number | bigint | string | null;
+      }[]
+    >`
+      WITH doctor_currency_totals AS (
+        SELECT
+          a."doctor_id" AS doctor_id,
+          UPPER(COALESCE(a."currency", 'UNKNOWN')) AS currency,
+          COALESCE(SUM(COALESCE(a."price_amount", 0)), 0) AS total
+        FROM "appointments" a
+        INNER JOIN "events" e ON e."id" = a."event_id"
+        WHERE a."status"::text = ${AppointmentStatus.COMPLETED}
+          AND e."service_date" BETWEEN ${rangeStartDate} AND ${rangeEndDate}
+        GROUP BY 1, 2
+      ),
+      ranked_doctors AS (
+        SELECT
+          doctor_id,
+          SUM(total) AS grand_total
+        FROM doctor_currency_totals
+        GROUP BY doctor_id
+        ORDER BY grand_total DESC
+        LIMIT ${safeLimit}
+      )
+      SELECT
+        dct.doctor_id AS "doctorId",
+        dct.currency,
+        dct.total,
+        rd.grand_total AS "grandTotal"
+      FROM doctor_currency_totals dct
+      INNER JOIN ranked_doctors rd ON rd.doctor_id = dct.doctor_id
+      ORDER BY rd.grand_total DESC, dct.currency ASC;
+    `;
+
+    const totalsByDoctor = new Map<
+      string,
+      { totals: Map<string, number>; grandTotal: number }
+    >();
+
+    for (const row of rows) {
+      if (!row.doctorId || !row.currency) {
+        continue;
+      }
+      let doctorEntry = totalsByDoctor.get(row.doctorId);
+      if (!doctorEntry) {
+        doctorEntry = {
+          totals: new Map<string, number>(),
+          grandTotal: 0,
+        };
+      }
+      doctorEntry.totals.set(row.currency, this.normalizeDecimal(row.total));
+      doctorEntry.grandTotal = this.normalizeDecimal(row.grandTotal);
+      totalsByDoctor.set(row.doctorId, doctorEntry);
+    }
+
+    const sorted = Array.from(totalsByDoctor.entries()).sort(
+      (a, b) => b[1].grandTotal - a[1].grandTotal,
+    );
+
+    return sorted.map(([doctorId, entry]) => {
+      const totalRecord: Record<string, number> = {};
+      for (const [currency, value] of entry.totals.entries()) {
+        totalRecord[currency] = Math.round(value * 100) / 100;
+      }
+      if (Object.keys(totalRecord).length === 0) {
+        totalRecord.VND = 0;
+      }
+      return {
+        doctorId,
+        total: totalRecord,
+      };
+    });
+  }
+
+  async getAppointmentsOverviewStats(): Promise<AppointmentStatsOverviewDto> {
+    const currentStart = dayjs().startOf('month').toDate();
+    const currentEnd = dayjs().endOf('month').toDate();
+    const previousStart = dayjs()
+      .subtract(1, 'month')
+      .startOf('month')
+      .toDate();
+    const previousEnd = dayjs().subtract(1, 'month').endOf('month').toDate();
+
+    const [
+      totalAppointments,
+      currentMonthAppointments,
+      previousMonthAppointments,
+    ] = await Promise.all([
+      this.prisma.appointment.count(),
+      this.prisma.appointment.count({
+        where: {
+          event: {
+            is: {
+              serviceDate: {
+                gte: currentStart,
+                lte: currentEnd,
+              },
+            },
+          },
+        },
+      }) as any,
+      this.prisma.appointment.count({
+        where: {
+          event: {
+            is: {
+              serviceDate: {
+                gte: previousStart,
+                lte: previousEnd,
+              },
+            },
+          },
+        },
+      }) as any,
+    ]);
+
+    return {
+      totalAppointments,
+      currentMonthAppointments,
+      previousMonthAppointments,
+      growthPercent: this.calculateGrowthPercent(
+        currentMonthAppointments,
+        previousMonthAppointments,
+      ),
+    };
+  }
+
   async getAppointmentById(id: string): Promise<Appointment> {
     const appt = await this.appointmentsRepo.findById(id);
     if (!appt) throw new NotFoundError('Appointment not found');
@@ -464,6 +677,37 @@ export class AppointmentsService {
       result.updated.status,
     );
     return result.updated;
+  }
+
+  private normalizeDecimal(
+    value: Prisma.Decimal | number | bigint | string | null,
+  ): number {
+    if (value === null || value === undefined) {
+      return 0;
+    }
+    if (typeof value === 'number') {
+      return value;
+    }
+    if (typeof value === 'bigint') {
+      return Number(value);
+    }
+    return Number(value.toString());
+  }
+
+  private calculateGrowthPercent(current: number, previous: number): number {
+    if (previous === 0) {
+      return 100;
+    }
+    const delta = ((current - previous) / previous) * 100;
+    return Number(delta.toFixed(2));
+  }
+
+  private normalizeLimit(limit?: number): number {
+    const value = Number(limit);
+    if (Number.isFinite(value) && value > 0) {
+      return Math.min(Math.floor(value), 50);
+    }
+    return 5;
   }
 
   private async ensureAvailableSlot(args: {

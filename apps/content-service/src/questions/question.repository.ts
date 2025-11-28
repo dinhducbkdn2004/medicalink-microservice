@@ -5,6 +5,7 @@ import {
   AnswerResponseDto,
   CreateQuestionDto,
   UpdateQuestionDto,
+  QAStatsOverviewDto,
 } from '@app/contracts';
 import { extractAllPublicIdsFromText } from '@app/commons/utils';
 import { QuestionStatus } from 'apps/content-service/prisma/generated/client';
@@ -325,6 +326,26 @@ export class QuestionRepository {
     return await this.prisma.answer.count({
       where: { questionId },
     });
+  }
+
+  async getQaOverview(): Promise<QAStatsOverviewDto> {
+    const [totalQuestions, answeredQuestions] = await Promise.all([
+      this.prisma.question.count(),
+      this.prisma.question.count({
+        where: { status: 'ANSWERED' },
+      }),
+    ]);
+
+    const answerRate =
+      totalQuestions === 0
+        ? 0
+        : Number(((answeredQuestions / totalQuestions) * 100).toFixed(2));
+
+    return {
+      totalQuestions,
+      answeredQuestions,
+      answerRate,
+    };
   }
 
   private transformQuestionResponse(

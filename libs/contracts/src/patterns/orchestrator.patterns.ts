@@ -32,4 +32,7 @@ export const ORCHESTRATOR_PATTERNS = {
   // Appointment notification dispatch
   APPOINTMENT_NOTIFICATION_DISPATCH:
     'orchestrator.appointment.notification.dispatch',
+
+  // Stats
+  STATS_REVENUE_BY_DOCTOR: 'orchestrator.stats.revenueByDoctor',
 };

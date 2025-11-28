@@ -2,6 +2,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PatientsService } from './patients.service';
 import { PATIENT_PATTERNS } from '@app/contracts/patterns';
+import { PatientStatsOverviewDto } from '@app/contracts';
 import { SearchOnePatientDto } from '@app/contracts';
 import type {
   CreatePatientDto,
@@ -48,5 +49,10 @@ export class PatientsController {
   @MessagePattern(PATIENT_PATTERNS.RESTORE)
   restore(@Payload() payload: { id: string; restoredBy?: string }) {
     return this.patientsService.restore(payload.id);
+  }
+
+  @MessagePattern(PATIENT_PATTERNS.STATS_OVERVIEW)
+  getOverview(): Promise<PatientStatsOverviewDto> {
+    return this.patientsService.getOverviewStats();
   }
 }

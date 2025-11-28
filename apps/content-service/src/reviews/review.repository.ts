@@ -5,6 +5,7 @@ import {
   CreateReviewDto,
   UpdateReviewDto,
 } from '@app/contracts';
+import { ReviewOverviewStatsDto } from '@app/contracts';
 
 @Injectable()
 export class ReviewRepository {
@@ -216,6 +217,38 @@ export class ReviewRepository {
         rating: item.rating,
         count: item._count.rating,
       })),
+    };
+  }
+
+  async getReviewOverview(): Promise<ReviewOverviewStatsDto> {
+    const [totalReviews, distribution] = await Promise.all([
+      this.prisma.review.count(),
+      this.prisma.review.groupBy({
+        by: ['rating'],
+        _count: { rating: true },
+      }),
+    ]);
+
+    const ratingCounts: ReviewOverviewStatsDto['ratingCounts'] = {
+      '1': 0,
+      '2': 0,
+      '3': 0,
+      '4': 0,
+      '5': 0,
+    };
+
+    distribution.forEach((item) => {
+      const key = String(
+        item.rating,
+      ) as keyof ReviewOverviewStatsDto['ratingCounts'];
+      if (ratingCounts[key] !== undefined) {
+        ratingCounts[key] = item._count.rating;
+      }
+    });
+
+    return {
+      totalReviews,
+      ratingCounts,
     };
   }
 

@@ -58,9 +58,15 @@ export class ResolvePromisesInterceptor implements NestInterceptor {
           this.reflector.get<string>(SUCCESS_MESSAGE_METADATA_KEY, handler) ??
           this.reflector.get<string>(SUCCESS_MESSAGE_METADATA_KEY, controller);
 
+        const hasDataProp =
+          serializedData &&
+          typeof serializedData === 'object' &&
+          !Array.isArray(serializedData) &&
+          'data' in serializedData;
+
         const responseData =
-          serializedData && ('data' in serializedData || isStandardResponse)
-            ? serializedData.data
+          (hasDataProp || isStandardResponse) && serializedData
+            ? (serializedData as Record<string, any>).data
             : serializedData;
 
         const standardResponse: SerializedResponse = {

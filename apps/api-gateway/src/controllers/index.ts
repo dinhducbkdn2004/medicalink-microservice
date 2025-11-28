@@ -12,3 +12,4 @@ export * from './questions.controller';
 export * from './reviews.controller';
 export * from './appointments.controller';
 export * from './office-hours.controller';
+export * from './stats.controller';

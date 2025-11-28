@@ -2,12 +2,16 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AppointmentsService } from './appointments.service';
 import { BOOKING_PATTERNS } from '@app/contracts/patterns';
-import {
+import type {
   CreateAppointmentDto,
   UpdateAppointmentDto,
   CancelAppointmentDto,
   ConfirmAppointmentDto,
   PaginatedResponse,
+  RevenueStatsItem,
+  RevenueByDoctorStatsItem,
+  RevenueByDoctorStatsQueryDto,
+  AppointmentStatsOverviewDto,
 } from '@app/contracts/dtos';
 import { Appointment } from '../../prisma/generated/client';
 import {
@@ -107,5 +111,22 @@ export class AppointmentsController {
       isTempHold: true,
       expiresAt,
     });
+  }
+
+  @MessagePattern(BOOKING_PATTERNS.REVENUE_STATS)
+  getRevenueStats(): Promise<RevenueStatsItem[]> {
+    return this.appointmentsService.getRevenueStats();
+  }
+
+  @MessagePattern(BOOKING_PATTERNS.REVENUE_BY_DOCTOR_STATS)
+  getRevenueByDoctorStats(
+    @Payload() payload: RevenueByDoctorStatsQueryDto = {},
+  ): Promise<RevenueByDoctorStatsItem[]> {
+    return this.appointmentsService.getRevenueByDoctorStats(payload?.limit);
+  }
+
+  @MessagePattern(BOOKING_PATTERNS.APPOINTMENT_OVERVIEW_STATS)
+  getAppointmentsOverview(): Promise<AppointmentStatsOverviewDto> {
+    return this.appointmentsService.getAppointmentsOverviewStats();
   }
 }

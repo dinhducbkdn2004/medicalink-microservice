@@ -8,3 +8,4 @@ export * from './content';
 export * from './common';
 export * from './permission-management';
 export * from './orchestrator';
+export * from './stats';

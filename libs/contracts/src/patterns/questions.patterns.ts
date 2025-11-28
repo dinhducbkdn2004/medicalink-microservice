@@ -4,6 +4,7 @@ export const QUESTIONS_PATTERNS = {
   GET_BY_ID: 'questions.getById',
   UPDATE: 'questions.update',
   DELETE: 'questions.delete',
+  STATS_OVERVIEW: 'questions.stats.overview',
 };
 
 export const ANSWERS_PATTERNS = {

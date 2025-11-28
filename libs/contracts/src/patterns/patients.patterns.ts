@@ -8,4 +8,5 @@ export const PATIENT_PATTERNS = {
   RESTORE: 'patients.restore',
   // Search single patient by identifiers
   SEARCH_ONE: 'patients.searchOne',
+  STATS_OVERVIEW: 'patients.stats.overview',
 } as const;

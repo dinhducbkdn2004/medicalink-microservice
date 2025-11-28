@@ -3,12 +3,18 @@ import {
   CreatePatientDto,
   UpdatePatientDto,
   SearchOnePatientDto,
+  PatientStatsOverviewDto,
 } from '@app/contracts';
 import { PatientRepository } from './patients.repository';
+import { PrismaService } from '../../prisma/prisma.service';
+import { dayjs } from '@app/commons/utils';
 
 @Injectable()
 export class PatientsService {
-  constructor(private readonly patientRepository: PatientRepository) {}
+  constructor(
+    private readonly patientRepository: PatientRepository,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async create(createPatientDto: CreatePatientDto) {
     return await this.patientRepository.create(createPatientDto);
@@ -90,5 +96,58 @@ export class PatientsService {
       fullName: dto.name,
       dateOfBirth,
     });
+  }
+
+  async getOverviewStats(): Promise<PatientStatsOverviewDto> {
+    const currentStart = dayjs().startOf('month').toDate();
+    const currentEnd = dayjs().endOf('month').toDate();
+    const previousStart = dayjs()
+      .subtract(1, 'month')
+      .startOf('month')
+      .toDate();
+    const previousEnd = dayjs().subtract(1, 'month').endOf('month').toDate();
+
+    const [totalPatients, currentMonthPatients, previousMonthPatients] =
+      await Promise.all([
+        this.prisma.patient.count({
+          where: { deletedAt: null },
+        }),
+        this.prisma.patient.count({
+          where: {
+            deletedAt: null,
+            createdAt: {
+              gte: currentStart,
+              lte: currentEnd,
+            },
+          },
+        }),
+        this.prisma.patient.count({
+          where: {
+            deletedAt: null,
+            createdAt: {
+              gte: previousStart,
+              lte: previousEnd,
+            },
+          },
+        }),
+      ]);
+
+    return {
+      totalPatients,
+      currentMonthPatients,
+      previousMonthPatients,
+      growthPercent: this.calculateGrowthPercent(
+        currentMonthPatients,
+        previousMonthPatients,
+      ),
+    };
+  }
+
+  private calculateGrowthPercent(current: number, previous: number): number {
+    if (previous === 0) {
+      return 100;
+    }
+    const delta = ((current - previous) / previous) * 100;
+    return Number(delta.toFixed(2));
   }
 }

@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { ConflictError, NotFoundError } from '@app/domain-errors';
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} from '@app/domain-errors';
 import { StaffRepository } from './staff.repository';
 import { PermissionAssignmentService } from '../permission/permission-assignment.service';
 import { StaffRole } from '../../prisma/generated/client';
@@ -13,11 +17,7 @@ import {
   StaffStatsDto,
   PaginatedResponse,
 } from '@app/contracts';
-import {
-  NOTIFICATION_PATTERNS,
-  ORCHESTRATOR_EVENTS,
-} from '@app/contracts/patterns';
-import { RabbitMQService } from '@app/rabbitmq';
+import { NOTIFICATION_PATTERNS } from '@app/contracts/patterns';
 
 @Injectable()
 export class StaffsService {
@@ -28,7 +28,6 @@ export class StaffsService {
     private readonly permissionAssignmentService: PermissionAssignmentService,
     @Inject('NOTIFICATION_SERVICE')
     private readonly notificationClient: ClientProxy,
-    private readonly rabbitMQService: RabbitMQService,
   ) {}
 
   async findAll(
@@ -84,6 +83,12 @@ export class StaffsService {
       throw new ConflictError('Email already exists');
     }
 
+    if (createAccountDto.role === StaffRole.DOCTOR) {
+      throw new BadRequestError(
+        'Doctors are not allowed to be created through this endpoint',
+      );
+    }
+
     const staff = await this.staffRepository.create(createAccountDto);
 
     try {
@@ -129,6 +134,10 @@ export class StaffsService {
       throw new NotFoundError('Staff member not found');
     }
 
+    if (updateStaffDto.role === StaffRole.DOCTOR) {
+      throw new BadRequestError('Cannot turn a staff member into a doctor');
+    }
+
     if (updateStaffDto.email && updateStaffDto.email !== existingStaff.email) {
       const staffWithEmail = await this.staffRepository.findByEmail(
         updateStaffDto.email,
@@ -140,43 +149,6 @@ export class StaffsService {
     }
 
     const staff = await this.staffRepository.update(id, updateStaffDto);
-
-    if (existingStaff.role === StaffRole.DOCTOR) {
-      try {
-        this.rabbitMQService.emitEvent(
-          ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_UPDATED,
-          {
-            id: staff.id,
-            role: staff.role,
-          },
-        );
-      } catch (error) {
-        this.logger.error(
-          `Failed to emit ${ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_UPDATED} event for staff ${staff.id}:`,
-          error,
-        );
-      }
-
-      if (updateStaffDto.fullName || updateStaffDto.isMale) {
-        try {
-          this.rabbitMQService.emitEvent(
-            ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_PROFILE_UPDATED,
-            {
-              staffId: staff.id,
-              fullName: staff.fullName,
-              isMale: staff.isMale,
-              role: staff.role,
-              updatedAt: staff.updatedAt.toISOString(),
-            },
-          );
-        } catch (error) {
-          this.logger.error(
-            `Failed to emit ${ORCHESTRATOR_EVENTS.STAFF_ACCOUNT_PROFILE_UPDATED} event for staff ${staff.id}:`,
-            error,
-          );
-        }
-      }
-    }
     const { passwordHash, ...result } = staff;
     return result;
   }
