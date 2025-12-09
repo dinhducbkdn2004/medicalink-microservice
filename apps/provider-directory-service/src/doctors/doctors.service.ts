@@ -83,6 +83,12 @@ export class DoctorsService {
       };
     }
 
+    if (filters?.search) {
+      where.fullName = {
+        contains: filters.search,
+      };
+    }
+
     const { data, total } = await this.doctorRepo.findManyPublic(
       where,
       {},
