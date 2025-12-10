@@ -30,11 +30,14 @@ import {
   UpdateQuestionDto,
   CreateAnswerDto,
 } from '@app/contracts/dtos';
+import { ORCHESTRATOR_PATTERNS } from '@app/contracts/patterns';
 
 @Controller('questions')
 export class QuestionsController {
   constructor(
     @Inject('CONTENT_SERVICE') private readonly contentClient: ClientProxy,
+    @Inject('ORCHESTRATOR_SERVICE')
+    private readonly orchestratorClient: ClientProxy,
     private readonly microserviceService: MicroserviceService,
   ) {}
 
@@ -55,9 +58,10 @@ export class QuestionsController {
   @Get()
   async findQuestions(@Query() query: GetQuestionsQueryDto) {
     return this.microserviceService.sendWithTimeout(
-      this.contentClient,
-      QUESTIONS_PATTERNS.GET_LIST,
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.QUESTION_LIST_COMPOSITE,
       query,
+      { timeoutMs: 15000 },
     );
   }
 
@@ -73,9 +77,10 @@ export class QuestionsController {
         ? increaseView.toLowerCase() !== 'false'
         : true;
     return this.microserviceService.sendWithTimeout(
-      this.contentClient,
-      QUESTIONS_PATTERNS.GET_BY_ID,
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.QUESTION_GET_COMPOSITE,
       { id, increaseView: shouldIncrease },
+      { timeoutMs: 15000 },
     );
   }
 
@@ -132,9 +137,10 @@ export class QuestionsController {
     @Query() query: PaginationDto,
   ) {
     return this.microserviceService.sendWithTimeout(
-      this.contentClient,
-      ANSWERS_PATTERNS.GET_LIST,
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.ANSWERS_LIST_COMPOSITE,
       { questionId, ...query, isAccepted: true },
+      { timeoutMs: 12000 },
     );
   }
 
@@ -145,9 +151,10 @@ export class QuestionsController {
     @Query() query: GetAnswersQueryDto,
   ) {
     return this.microserviceService.sendWithTimeout(
-      this.contentClient,
-      ANSWERS_PATTERNS.GET_LIST,
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.ANSWERS_LIST_COMPOSITE,
       { questionId, ...query },
+      { timeoutMs: 12000 },
     );
   }
 

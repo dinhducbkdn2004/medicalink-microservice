@@ -18,6 +18,11 @@ export const ORCHESTRATOR_PATTERNS = {
   BLOG_PUBLIC_LIST_COMPOSITE: 'orchestrator.blog.publicListComposite',
   BLOG_PUBLIC_GET_COMPOSITE: 'orchestrator.blog.publicGetComposite',
 
+  // Question composition (read)
+  QUESTION_GET_COMPOSITE: 'orchestrator.question.getComposite',
+  QUESTION_LIST_COMPOSITE: 'orchestrator.question.listComposite',
+  ANSWERS_LIST_COMPOSITE: 'orchestrator.answers.listComposite',
+
   // Schedule slots composition (read)
   SCHEDULE_SLOTS_LIST: 'orchestrator.scheduleSlots.list',
 

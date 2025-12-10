@@ -307,10 +307,6 @@ export class QuestionRepository {
     if (!answer) return;
 
     await this.prisma.$transaction([
-      this.prisma.answer.updateMany({
-        where: { questionId: answer.questionId },
-        data: { isAccepted: false },
-      }),
       this.prisma.answer.update({
         where: { id },
         data: { isAccepted: true },

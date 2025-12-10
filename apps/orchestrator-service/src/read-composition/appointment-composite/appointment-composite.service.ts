@@ -5,12 +5,16 @@ import {
   BOOKING_PATTERNS,
   DOCTOR_PROFILES_PATTERNS,
   STAFFS_PATTERNS,
+  WORK_LOCATIONS_PATTERNS,
+  SPECIALTIES_PATTERNS,
 } from '@app/contracts/patterns';
 import { ListAppointmentsQueryDto } from '@app/contracts/dtos/booking';
 import { DoctorProfileResponseDto, PaginatedResponse } from '@app/contracts';
 
-type AppointmentWithDoctor = any & {
+type AppointmentWithExtras = any & {
   doctor?: DoctorProfileResponseDto | null;
+  location?: { id: string; name: string; address?: string } | null;
+  specialty?: { id: string; name: string; slug: string } | null;
 };
 
 @Injectable()
@@ -27,7 +31,7 @@ export class AppointmentCompositeService {
 
   async listComposite(
     query: ListAppointmentsQueryDto,
-  ): Promise<PaginatedResponse<AppointmentWithDoctor>> {
+  ): Promise<PaginatedResponse<AppointmentWithExtras>> {
     // 1) Fetch appointments from booking
     const appointmentsResp = await this.clientHelper.send<
       PaginatedResponse<any>
@@ -40,10 +44,10 @@ export class AppointmentCompositeService {
       return {
         ...appointmentsResp,
         data: [],
-      } as PaginatedResponse<AppointmentWithDoctor>;
+      } as PaginatedResponse<AppointmentWithExtras>;
     }
 
-    // 2) Collect unique doctor profile IDs
+    // 2) Collect unique IDs
     const doctorProfileIds = Array.from(
       new Set(
         appointments
@@ -52,13 +56,55 @@ export class AppointmentCompositeService {
       ),
     );
 
-    // 3) Fetch doctor profiles in one call -> get staffAccountIds
-    const profiles = await this.clientHelper
-      .send<
-        Partial<DoctorProfileResponseDto>[]
-      >(this.providerClient, DOCTOR_PROFILES_PATTERNS.GET_BY_IDS, { ids: doctorProfileIds }, { timeoutMs: 8000 })
-      .catch(() => []);
+    const locationIds = Array.from(
+      new Set(
+        appointments
+          .map((a: any) => a.locationId)
+          .filter((v: any) => typeof v === 'string' && v.length > 0),
+      ),
+    );
 
+    const specialtyIds = Array.from(
+      new Set(
+        appointments
+          .map((a: any) => a.specialtyId)
+          .filter((v: any) => typeof v === 'string' && v.length > 0),
+      ),
+    );
+
+    // 3) Fetch all data in parallel
+    const [profiles, locations, specialties] = await Promise.all([
+      // Fetch doctor profiles
+      this.clientHelper
+        .send<
+          Partial<DoctorProfileResponseDto>[]
+        >(this.providerClient, DOCTOR_PROFILES_PATTERNS.GET_BY_IDS, { ids: doctorProfileIds }, { timeoutMs: 8000 })
+        .catch(() => []),
+
+      // Fetch locations
+      locationIds.length > 0
+        ? this.clientHelper
+            .send<
+              any[]
+            >(this.providerClient, WORK_LOCATIONS_PATTERNS.GET_BY_IDS, { ids: locationIds }, { timeoutMs: 5000 })
+            .catch(() => [])
+        : Promise.resolve([]),
+
+      // Fetch specialties
+      specialtyIds.length > 0
+        ? Promise.all(
+            specialtyIds.map((id) =>
+              this.clientHelper
+                .send(this.providerClient, SPECIALTIES_PATTERNS.FIND_ONE, id, {
+                  timeoutMs: 3000,
+                })
+                .catch(() => null),
+            ),
+          ).then((results) => results.filter(Boolean))
+        : Promise.resolve([]),
+    ]);
+
+    // 4) Build maps
     const profileById = new Map<string, Partial<DoctorProfileResponseDto>>();
     const staffIds: string[] = [];
     profiles.forEach((p: Partial<DoctorProfileResponseDto>) => {
@@ -68,9 +114,18 @@ export class AppointmentCompositeService {
       }
     });
 
-    const uniqueStaffIds = Array.from(new Set(staffIds));
+    const locationById = new Map<string, any>();
+    locations.forEach((loc: any) => {
+      if (loc?.id) locationById.set(loc.id, loc);
+    });
 
-    // 4) Fetch staff accounts -> id, fullName
+    const specialtyById = new Map<string, any>();
+    specialties.forEach((spec: any) => {
+      if (spec?.id) specialtyById.set(spec.id, spec);
+    });
+
+    // 5) Fetch staff accounts for doctor names
+    const uniqueStaffIds = Array.from(new Set(staffIds));
     const staffList = uniqueStaffIds.length
       ? await this.clientHelper
           .send<
@@ -78,23 +133,41 @@ export class AppointmentCompositeService {
           >(this.accountsClient, STAFFS_PATTERNS.FIND_BY_IDS, { staffIds: uniqueStaffIds }, { timeoutMs: 10000 })
           .catch(() => [])
       : [];
+
     const staffNameById = new Map<string, string>();
     staffList.forEach((s) => {
       if (s?.id) staffNameById.set(s.id, s.fullName);
     });
 
-    // 5) Compose doctorName for each appointment
-    const enriched: AppointmentWithDoctor[] = appointments.map((a: any) => {
+    // 6) Compose all data for each appointment
+    const enriched: AppointmentWithExtras[] = appointments.map((a: any) => {
       const prof = a?.doctorId ? profileById.get(a.doctorId as string) : null;
-      const name = prof?.staffAccountId
+      const doctorName = prof?.staffAccountId
         ? staffNameById.get(prof.staffAccountId)
         : null;
-      return { ...a, doctor: { ...prof, name: name ?? null } };
+
+      const loc = a?.locationId
+        ? locationById.get(a.locationId as string)
+        : null;
+      const spec = a?.specialtyId
+        ? specialtyById.get(a.specialtyId as string)
+        : null;
+
+      return {
+        ...a,
+        doctor: prof ? { ...prof, name: doctorName ?? null } : null,
+        location: loc
+          ? { id: loc.id, name: loc.name, address: loc.address }
+          : null,
+        specialty: spec
+          ? { id: spec.id, name: spec.name, slug: spec.slug }
+          : null,
+      };
     });
 
     return {
       ...appointmentsResp,
       data: enriched,
-    } as PaginatedResponse<AppointmentWithDoctor>;
+    } as PaginatedResponse<AppointmentWithExtras>;
   }
 }

@@ -26,6 +26,13 @@ export class WorkLocationsController {
     return this.workLocationsService.findOne(id);
   }
 
+  @MessagePattern(WORK_LOCATIONS_PATTERNS.GET_BY_IDS)
+  async getByIds(
+    @Payload() payload: { ids: string[] },
+  ): Promise<WorkLocationResponseDto[]> {
+    return this.workLocationsService.getByIds(payload.ids);
+  }
+
   @MessagePattern(WORK_LOCATIONS_PATTERNS.CREATE)
   async create(
     @Payload() createWorkLocationDto: CreateWorkLocationDto,

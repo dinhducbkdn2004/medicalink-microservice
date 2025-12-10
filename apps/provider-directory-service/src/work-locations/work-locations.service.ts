@@ -44,6 +44,13 @@ export class WorkLocationsService {
     return this.mapToWorkLocationResponseDto(workLocation);
   }
 
+  async getByIds(ids: string[]): Promise<WorkLocationResponseDto[]> {
+    const locations = await this.workLocationRepository.findByIds(ids);
+    return locations.map((location) =>
+      this.mapToWorkLocationResponseDto(location),
+    );
+  }
+
   async create(
     createWorkLocationDto: CreateWorkLocationDto,
   ): Promise<WorkLocationResponseDto> {

@@ -81,6 +81,18 @@ export class WorkLocationRepository {
     });
   }
 
+  async findByIds(ids: string[]): Promise<WorkLocation[]> {
+    if (!ids || ids.length === 0) return [];
+
+    return this.prisma.workLocation.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    });
+  }
+
   async create(data: CreateWorkLocationDto): Promise<WorkLocation> {
     return this.prisma.workLocation.create({
       data: {
