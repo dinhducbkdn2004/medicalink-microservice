@@ -201,11 +201,17 @@ export class PatientRepository extends BaseRepository<
   }
 
   async findOneByIdentifiers(params: {
+    id?: string;
     email?: string;
     phone?: string;
-    fullName?: string;
-    dateOfBirth?: Date | null;
   }): Promise<Patient | null> {
+    // If ID is provided, find directly by ID
+    if (params.id) {
+      return await this.model.findFirst({
+        where: { id: params.id, deletedAt: null },
+      });
+    }
+
     const normalizePhone = (v: string): string => v.replace(/[^0-9]/g, '');
 
     const andConditions: any[] = [{ deletedAt: null }];
@@ -213,14 +219,6 @@ export class PatientRepository extends BaseRepository<
       andConditions.push({
         email: { equals: params.email, mode: 'insensitive' },
       });
-    }
-    if (params.fullName) {
-      andConditions.push({
-        fullName: { equals: params.fullName, mode: 'insensitive' },
-      });
-    }
-    if (params.dateOfBirth) {
-      andConditions.push({ dateOfBirth: params.dateOfBirth });
     }
 
     // If phone provided, fetch candidates by last 4 digits then normalize compare in-memory

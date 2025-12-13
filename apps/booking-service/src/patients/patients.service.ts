@@ -83,18 +83,10 @@ export class PatientsService {
   }
 
   async searchOneByIdentifiers(dto: SearchOnePatientDto) {
-    const dateOfBirth = (dto.dob as any) ? new Date(dto.dob as string) : null;
-    console.log({
-      email: dto.email,
-      phone: dto.phone,
-      fullName: dto.name,
-      dateOfBirth,
-    });
     return await this.patientRepository.findOneByIdentifiers({
+      id: dto.id,
       email: dto.email,
       phone: dto.phone,
-      fullName: dto.name,
-      dateOfBirth,
     });
   }
 
