@@ -43,6 +43,13 @@ export class EmailConfigService {
     };
   }
 
+  getAppointmentLookupUrl(): string {
+    return this.config.get<string>(
+      'CLIENT_APPOINTMENT_LOOKUP',
+      'https://client.medicalink.click/patient-lookup',
+    );
+  }
+
   private resolveSecureFlag(port: number): boolean {
     const secureEnv = this.config.get<string>('SMTP_SECURE');
     if (typeof secureEnv !== 'undefined') {

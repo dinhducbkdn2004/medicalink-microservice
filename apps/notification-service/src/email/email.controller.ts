@@ -10,12 +10,16 @@ import { NOTIFICATION_PATTERNS } from '@app/contracts/patterns';
 import { Controller, Logger } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { EmailService } from './services/email.service';
+import { EmailConfigService } from './services/email-config.service';
 
 @Controller()
 export class EmailController {
   private readonly logger = new Logger(EmailController.name);
 
-  constructor(private readonly emailService: EmailService) {}
+  constructor(
+    private readonly emailService: EmailService,
+    private readonly emailConfigService: EmailConfigService,
+  ) {}
 
   @EventPattern('notification.email.send')
   async handleSendEmail(@Payload() data: EmailSendDto): Promise<void> {
@@ -74,7 +78,6 @@ export class EmailController {
       context: {
         subject,
         patientName: event.patientName,
-        appointmentId: event.appointmentId,
         patientId: event.patientId,
         doctorId: event.doctorId,
         doctorName:
@@ -93,6 +96,7 @@ export class EmailController {
         notes: event.notes,
         reason: event.reason,
         lookupReference: event.lookupReference ?? event.patientId,
+        appointmentLookupUrl: this.emailConfigService.getAppointmentLookupUrl(),
       },
     });
   }
@@ -117,13 +121,23 @@ export class EmailController {
       context: {
         subject,
         patientName: event.patientName,
-        appointmentId: event.appointmentId,
         patientId: event.patientId,
+        previousStatusLabel: this.getStatusLabel(event.previousStatus),
+        newStatusLabel: this.getStatusLabel(event.newStatus),
+        doctorName: event.doctorDisplayName ?? event.doctorName ?? null,
+        specialtyName: event.specialtyName,
+        locationName: event.locationName,
+        locationAddress: event.locationAddress,
+        locationPhone: event.locationPhone,
+        serviceDate: event.serviceDate,
+        timeStart: event.timeStart,
+        timeEnd: event.timeEnd,
         changedAt: event.changedAt,
         statusMessage:
           event.statusMessage ?? this.getStatusHeadline(event.newStatus),
         statusNote: event.statusNote,
         lookupReference: event.lookupReference ?? event.patientId,
+        appointmentLookupUrl: this.emailConfigService.getAppointmentLookupUrl(),
       },
     });
   }

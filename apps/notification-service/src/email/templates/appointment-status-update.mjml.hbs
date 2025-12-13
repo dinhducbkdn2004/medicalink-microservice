@@ -9,20 +9,56 @@
   Note from our team: {{statusNote}}
 </mj-text>
 {{/if}}
-<mj-table>
+<mj-table css-class="mobile-table">
   <tr>
-    <td style="font-weight:600;padding:4px 0;width:160px;">Patient ID</td>
-    <td style="padding:4px 0;">{{patientId}}</td>
+    <td style="font-weight:600;padding:2px 0;width:160px;">Status Changed</td>
+    <td style="padding:2px 0;">{{previousStatusLabel}} → {{newStatusLabel}}</td>
   </tr>
+  {{#if doctorName}}
   <tr>
-    <td style="font-weight:600;padding:4px 0;width:160px;">Appointment ID</td>
-    <td style="padding:4px 0;">{{appointmentId}}</td>
+    <td style="font-weight:600;padding:2px 0;width:160px;">Doctor</td>
+    <td style="padding:2px 0;">{{doctorName}}</td>
   </tr>
+  {{/if}}
+  {{#if specialtyName}}
   <tr>
-    <td style="font-weight:600;padding:4px 0;width:160px;">Updated at</td>
-    <td style="padding:4px 0;">{{changedAt}}</td>
+    <td style="font-weight:600;padding:2px 0;width:160px;">Specialty</td>
+    <td style="padding:2px 0;">{{specialtyName}}</td>
+  </tr>
+  {{/if}}
+  {{#if serviceDate}}
+  <tr>
+    <td style="font-weight:600;padding:2px 0;width:160px;">Date</td>
+    <td style="padding:2px 0;">{{serviceDate}}</td>
+  </tr>
+  {{/if}}
+  {{#if timeStart}}
+  <tr>
+    <td style="font-weight:600;padding:2px 0;width:160px;">Time</td>
+    <td style="padding:2px 0;">{{timeStart}} – {{timeEnd}}</td>
+  </tr>
+  {{/if}}
+  {{#if locationName}}
+  <tr>
+    <td style="font-weight:600;padding:2px 0;width:160px;">Location</td>
+    <td style="padding:2px 0;">{{locationName}}</td>
+  </tr>
+  {{/if}}
+  {{#if locationAddress}}
+  <tr>
+    <td style="font-weight:600;padding:2px 0;width:160px;">Address</td>
+    <td style="padding:2px 0;">{{locationAddress}}</td>
+  </tr>
+  {{/if}}
+  {{#if locationPhone}}
+  <tr>
+    <td style="font-weight:600;padding:2px 0;width:160px;">Phone</td>
+    <td style="padding:2px 0;">{{locationPhone}}</td>
+  </tr>
+  {{/if}}
+  <tr>
+    <td style="font-weight:600;padding:2px 0;width:160px;">Updated at</td>
+    <td style="padding:2px 0;">{{changedAt}}</td>
   </tr>
 </mj-table>
-<mj-text>
-  Need assistance? Share your patient ID ({{lookupReference}}) and we will help you track this visit.
-</mj-text>
+{{> appointment-lookup-button }}
