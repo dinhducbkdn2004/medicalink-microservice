@@ -20,6 +20,8 @@ import {
   RevenueStatsItem,
   RevenueByDoctorStatsItem,
   AppointmentStatsOverviewDto,
+  DoctorBookingStatsDto,
+  DoctorBookingStatsQueryDto,
 } from '@app/contracts';
 import {
   DOCTOR_PROFILES_PATTERNS,
@@ -483,6 +485,88 @@ export class AppointmentsService {
         currentMonthAppointments,
         previousMonthAppointments,
       ),
+    };
+  }
+
+  async getDoctorBookingStats(
+    doctorStaffAccountId: string,
+  ): Promise<DoctorBookingStatsDto> {
+    const stats =
+      await this.appointmentsRepo.getDoctorBookingStats(doctorStaffAccountId);
+
+    const completedRate =
+      stats.pastTotal > 0
+        ? Number(((stats.completedCount / stats.pastTotal) * 100).toFixed(2))
+        : 0;
+
+    return {
+      doctorStaffAccountId,
+      total: stats.total,
+      bookedCount: stats.bookedCount,
+      confirmedCount: stats.confirmedCount,
+      cancelledCount: stats.cancelledCount,
+      completedCount: stats.completedCount,
+      completedRate,
+    };
+  }
+
+  async getDoctorBookingStatsList(
+    query: DoctorBookingStatsQueryDto,
+  ): Promise<PaginatedResponse<DoctorBookingStatsDto>> {
+    const page = query.page ?? 1;
+    const limit = Math.min(query.limit ?? 10, 100);
+    const skip = (page - 1) * limit;
+
+    // Get all stats from repository
+    const statsRows = await this.appointmentsRepo.getDoctorBookingStatsList();
+
+    // Transform to DoctorBookingStatsDto with completedRate
+    const stats = statsRows.map((row) => {
+      const completedRate =
+        row.pastTotal > 0
+          ? Number(((row.completedCount / row.pastTotal) * 100).toFixed(2))
+          : 0;
+
+      return {
+        doctorStaffAccountId: row.doctorStaffAccountId,
+        total: row.total,
+        bookedCount: row.bookedCount,
+        confirmedCount: row.confirmedCount,
+        cancelledCount: row.cancelledCount,
+        completedCount: row.completedCount,
+        completedRate,
+      };
+    });
+
+    // Sort if sortBy is provided
+    if (query.sortBy) {
+      const order = query.sortOrder === 'asc' ? 1 : -1;
+      stats.sort((a, b) => {
+        const aVal =
+          (a[
+            `${query.sortBy}Count` as keyof DoctorBookingStatsDto
+          ] as number) || a.completedRate;
+        const bVal =
+          (b[
+            `${query.sortBy}Count` as keyof DoctorBookingStatsDto
+          ] as number) || b.completedRate;
+        return (aVal - bVal) * order;
+      });
+    }
+
+    const total = stats.length;
+    const data = stats.slice(skip, skip + limit);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+      },
     };
   }
 

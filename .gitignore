@@ -84,3 +84,4 @@ nginx/ssl/
 # Local docs
 CLAUDE.md
 .claude
+.gemini

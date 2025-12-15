@@ -1,7 +1,9 @@
-import { Controller, Get, Inject, Query } from '@nestjs/common';
+import { Controller, Get, Inject, Query, Param } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
   RequireReadPermission,
+  CurrentUser,
+  type JwtPayloadDto,
   RevenueStatsItem,
   RevenueByDoctorStatsQueryDto,
   RevenueByDoctorWithProfileDto,
@@ -9,6 +11,12 @@ import {
   AppointmentStatsOverviewDto,
   ReviewOverviewStatsDto,
   QAStatsOverviewDto,
+  DoctorMyStatsDto,
+  DoctorBookingStatsQueryDto,
+  DoctorBookingStatsWithProfileDto,
+  DoctorContentStatsQueryDto,
+  DoctorContentStatsWithProfileDto,
+  PaginatedResponse,
 } from '@app/contracts';
 import {
   BOOKING_PATTERNS,
@@ -99,12 +107,62 @@ export class StatsController {
 
   @RequireReadPermission('questions')
   @Get('qa-overview')
-  getQaOverview(): Promise<QAStatsOverviewDto> {
-    return this.microserviceService.sendWithTimeout<QAStatsOverviewDto>(
+  async qaOverviewStats(): Promise<QAStatsOverviewDto> {
+    return this.microserviceService.sendWithTimeout(
       this.contentClient,
       QUESTIONS_PATTERNS.STATS_OVERVIEW,
       {},
-      { timeoutMs: 8000 },
+      { timeoutMs: 10000 },
+    );
+  }
+
+  @RequireReadPermission('doctors')
+  @Get('doctors/me')
+  async getDoctorMyStats(
+    @CurrentUser() user: JwtPayloadDto,
+  ): Promise<DoctorMyStatsDto> {
+    return this.microserviceService.sendWithTimeout<DoctorMyStatsDto>(
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.STATS_DOCTOR_BY_ID,
+      { doctorStaffAccountId: user.sub },
+      { timeoutMs: 15000 },
+    );
+  }
+
+  @RequireReadPermission('appointments')
+  @Get('doctors/booking')
+  async getDoctorsBookingStats(
+    @Query() query: DoctorBookingStatsQueryDto,
+  ): Promise<PaginatedResponse<DoctorBookingStatsWithProfileDto>> {
+    return this.microserviceService.sendWithTimeout(
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.STATS_DOCTORS_BOOKING,
+      query,
+      { timeoutMs: 15000 },
+    );
+  }
+
+  @RequireReadPermission('reviews')
+  @Get('doctors/content')
+  async getDoctorsContentStats(
+    @Query() query: DoctorContentStatsQueryDto,
+  ): Promise<PaginatedResponse<DoctorContentStatsWithProfileDto>> {
+    return this.microserviceService.sendWithTimeout(
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.STATS_DOCTORS_CONTENT,
+      query,
+      { timeoutMs: 15000 },
+    );
+  }
+
+  @RequireReadPermission('doctors')
+  @Get('doctors/:id')
+  async getDoctorStatsById(@Param('id') id: string): Promise<DoctorMyStatsDto> {
+    return this.microserviceService.sendWithTimeout<DoctorMyStatsDto>(
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.STATS_DOCTOR_BY_ID,
+      { doctorStaffAccountId: id },
+      { timeoutMs: 15000 },
     );
   }
 }

@@ -113,6 +113,7 @@ export class DoctorRepository {
         // select all scalar fields of doctor (replace/add fields as needed)
         id: true,
         staffAccountId: true,
+        fullName: true,
         appointmentDuration: true,
         avatarUrl: true,
         isActive: true,
@@ -121,8 +122,8 @@ export class DoctorRepository {
         createdAt: true,
         updatedAt: true,
         ...(minimal
-          ? {
-              fullName: true,
+          ? {}
+          : {
               isMale: true,
               introduction: true,
               memberships: true,
@@ -130,8 +131,7 @@ export class DoctorRepository {
               research: true,
               trainingProcess: true,
               experience: true,
-            }
-          : {}),
+            }),
         doctorSpecialties: {
           select: {
             specialty: true,

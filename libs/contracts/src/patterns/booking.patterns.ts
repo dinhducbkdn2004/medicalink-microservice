@@ -29,4 +29,6 @@ export const BOOKING_PATTERNS = {
   REVENUE_STATS: 'booking.stats.revenue',
   REVENUE_BY_DOCTOR_STATS: 'booking.stats.revenueByDoctor',
   APPOINTMENT_OVERVIEW_STATS: 'booking.stats.appointmentsOverview',
+  DOCTOR_BOOKING_STATS: 'booking.stats.doctorBooking',
+  DOCTOR_BOOKING_STATS_LIST: 'booking.stats.doctorBookingList',
 };

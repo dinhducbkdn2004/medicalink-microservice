@@ -5,4 +5,6 @@ export const REVIEWS_PATTERNS = {
   GET_BY_ID: 'reviews.getById',
   DELETE: 'reviews.delete',
   STATS_OVERVIEW: 'reviews.stats.overview',
+  STATS_BY_DOCTOR: 'reviews.stats.byDoctor',
+  STATS_BY_DOCTORS: 'reviews.stats.byDoctors',
 };

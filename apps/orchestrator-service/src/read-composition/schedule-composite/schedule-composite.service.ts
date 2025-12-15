@@ -11,6 +11,8 @@ import {
   ScheduleSlotDto,
   DoctorProfileResponseDto,
   OfficeHoursResponseDto,
+  MonthSlotsQueryDto,
+  MonthAvailabilityResponseDto,
 } from '@app/contracts/dtos';
 import { TIMEOUTS } from '../../common/constants';
 import {
@@ -123,7 +125,6 @@ export class ScheduleCompositeService {
       BOOKING_PATTERNS.LIST_EVENTS_BY_FILTER,
       {
         doctorId,
-        locationId,
         serviceDate,
         nonBlocking: false,
       },
@@ -181,5 +182,77 @@ export class ScheduleCompositeService {
     }
 
     return slots;
+  }
+
+  /**
+   * Get available dates in a month for a doctor's schedule.
+   * Returns a list of dates that have at least one available slot.
+   */
+  async listMonthAvailability(
+    doctorId: string,
+    query: MonthSlotsQueryDto,
+  ): Promise<MonthAvailabilityResponseDto> {
+    const { month: reqMonth, year: reqYear, locationId, allowPast } = query;
+
+    // Calculate number of days in the month
+
+    // Generate all dates in the month
+    const availableDates: string[] = [];
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const currentDay = now.getDate();
+
+    const month = Number(reqMonth) || currentMonth;
+    const year = Number(reqYear) || currentYear;
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    // Determine start day to avoid checking past dates
+    let startDay = 1;
+    if (!allowPast) {
+      if (year < currentYear) {
+        return { availableDates: [], month, year };
+      }
+      if (year === currentYear) {
+        if (month < currentMonth) {
+          return { availableDates: [], month, year };
+        }
+        if (month === currentMonth) {
+          startDay = currentDay;
+        }
+      }
+    }
+
+    // Check each day in the month
+    for (let day = startDay; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+      try {
+        // Use existing listSlots logic to check if this date has available slots
+        const slots = await this.listSlots({
+          doctorId,
+          serviceDate: dateStr,
+          locationId,
+          allowPast: true, // Allow checking past dates to get availability
+          strict: true,
+        });
+
+        // If there's at least one available slot, add this date
+        if (slots && slots.length > 0) {
+          availableDates.push(dateStr);
+        }
+      } catch (_error) {
+        // If there's an error checking this date, skip it
+        // This could happen for invalid dates or other issues
+        continue;
+      }
+    }
+
+    return {
+      availableDates,
+      month,
+      year,
+    };
   }
 }

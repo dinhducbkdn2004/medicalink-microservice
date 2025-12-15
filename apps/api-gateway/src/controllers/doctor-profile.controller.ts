@@ -27,6 +27,8 @@ import type {
   JwtPayloadDto,
   ScheduleSlotsPublicQueryDto,
   DoctorProfileResponseDto,
+  MonthSlotsQueryDto,
+  MonthAvailabilityResponseDto,
 } from '@app/contracts/dtos';
 import { MicroserviceService } from '../utils/microservice.service';
 import {
@@ -182,6 +184,23 @@ export class DoctorProfileController {
     );
   }
 
+  @Public()
+  @Get(':id/month-slots')
+  async getMonthSlots(
+    @Param('id') id: string,
+    @Query() query: MonthSlotsQueryDto,
+  ): Promise<MonthAvailabilityResponseDto> {
+    return await this.microserviceService.sendWithTimeout(
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.SCHEDULE_MONTH_AVAILABILITY,
+      {
+        doctorId: id,
+        query,
+      },
+      { timeoutMs: 30000 }, // Longer timeout since it checks multiple dates
+    );
+  }
+
   @RequireUpdatePermission('doctors')
   @Patch(':id/toggle-active')
   toggleActive(
@@ -227,7 +246,6 @@ export class DoctorProfileController {
     doctor: DoctorProfileResponseDto,
   ): DoctorPublicProfile {
     const {
-      staffAccountId: _staffAccountId,
       isActive: _isActive,
       createdAt: _createdAt,
       updatedAt: _updatedAt,

@@ -25,6 +25,7 @@ export const ORCHESTRATOR_PATTERNS = {
 
   // Schedule slots composition (read)
   SCHEDULE_SLOTS_LIST: 'orchestrator.scheduleSlots.list',
+  SCHEDULE_MONTH_AVAILABILITY: 'orchestrator.scheduleSlots.monthAvailability',
 
   // Appointment composition (read)
   APPOINTMENT_LIST_COMPOSITE: 'orchestrator.appointment.listComposite',
@@ -40,4 +41,7 @@ export const ORCHESTRATOR_PATTERNS = {
 
   // Stats
   STATS_REVENUE_BY_DOCTOR: 'orchestrator.stats.revenueByDoctor',
+  STATS_DOCTOR_BY_ID: 'orchestrator.stats.doctorById',
+  STATS_DOCTORS_BOOKING: 'orchestrator.stats.doctorsBooking',
+  STATS_DOCTORS_CONTENT: 'orchestrator.stats.doctorsContent',
 };

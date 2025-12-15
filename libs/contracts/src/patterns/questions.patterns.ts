@@ -13,4 +13,6 @@ export const ANSWERS_PATTERNS = {
   GET_BY_ID: 'answers.getById',
   UPDATE: 'answers.update',
   DELETE: 'answers.delete',
+  STATS_BY_DOCTOR: 'answers.stats.byDoctor',
+  STATS_BY_DOCTORS: 'answers.stats.byDoctors',
 };

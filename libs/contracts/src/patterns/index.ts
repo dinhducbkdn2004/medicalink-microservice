@@ -1,6 +1,7 @@
 export * from './auth.patterns';
 export * from './assets.patterns';
 export * from './blogs.patterns';
+export * from './content-stats.patterns';
 export * from './doctors.patterns';
 export * from './permission.patterns';
 export * from './questions.patterns';

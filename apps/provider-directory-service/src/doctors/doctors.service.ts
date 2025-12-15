@@ -235,7 +235,7 @@ export class DoctorsService {
       };
     }
 
-    return this.doctorRepo.findAll(where);
+    return this.doctorRepo.findAll(where, true);
   }
 
   /**

@@ -116,12 +116,12 @@ export class AppointmentCompositeService {
 
     const locationById = new Map<string, any>();
     locations.forEach((loc: any) => {
-      if (loc?.id) locationById.set(loc.id, loc);
+      if (loc?.id) locationById.set(String(loc.id), loc);
     });
 
     const specialtyById = new Map<string, any>();
     specialties.forEach((spec: any) => {
-      if (spec?.id) specialtyById.set(spec.id, spec);
+      if (spec?.id) specialtyById.set(String(spec.id), spec);
     });
 
     // 5) Fetch staff accounts for doctor names

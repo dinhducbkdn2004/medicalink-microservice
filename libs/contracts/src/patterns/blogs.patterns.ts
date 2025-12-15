@@ -6,6 +6,8 @@ export const BLOGS_PATTERNS = {
   UPDATE: 'blogs.update',
   UPDATE_BY_DOCTOR: 'blogs.updateByDoctor',
   DELETE: 'blogs.delete',
+  STATS_BY_DOCTOR: 'blogs.stats.byDoctor',
+  STATS_BY_DOCTORS: 'blogs.stats.byDoctors',
 };
 
 export const BLOG_CATEGORIES_PATTERNS = {

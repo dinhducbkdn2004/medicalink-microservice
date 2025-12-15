@@ -12,6 +12,8 @@ import type {
   RevenueByDoctorStatsItem,
   RevenueByDoctorStatsQueryDto,
   AppointmentStatsOverviewDto,
+  DoctorBookingStatsDto,
+  DoctorBookingStatsQueryDto,
 } from '@app/contracts/dtos';
 import { Appointment } from '../../prisma/generated/client';
 import {
@@ -128,5 +130,21 @@ export class AppointmentsController {
   @MessagePattern(BOOKING_PATTERNS.APPOINTMENT_OVERVIEW_STATS)
   getAppointmentsOverview(): Promise<AppointmentStatsOverviewDto> {
     return this.appointmentsService.getAppointmentsOverviewStats();
+  }
+
+  @MessagePattern(BOOKING_PATTERNS.DOCTOR_BOOKING_STATS)
+  getDoctorBookingStats(
+    @Payload() payload: { doctorStaffAccountId: string },
+  ): Promise<DoctorBookingStatsDto> {
+    return this.appointmentsService.getDoctorBookingStats(
+      payload.doctorStaffAccountId,
+    );
+  }
+
+  @MessagePattern(BOOKING_PATTERNS.DOCTOR_BOOKING_STATS_LIST)
+  getDoctorBookingStatsList(
+    @Payload() query: DoctorBookingStatsQueryDto,
+  ): Promise<PaginatedResponse<DoctorBookingStatsDto>> {
+    return this.appointmentsService.getDoctorBookingStatsList(query);
   }
 }

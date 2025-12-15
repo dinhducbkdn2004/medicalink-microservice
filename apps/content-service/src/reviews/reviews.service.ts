@@ -95,7 +95,9 @@ export class ReviewsService {
     try {
       await firstValueFrom(
         this.providerDirectoryClient
-          .send(DOCTOR_PROFILES_PATTERNS.FIND_ONE, doctorId)
+          .send(DOCTOR_PROFILES_PATTERNS.GET_BY_ACCOUNT_ID, {
+            staffAccountId: doctorId,
+          })
           .pipe(timeout(8000)),
       );
     } catch (_error) {
