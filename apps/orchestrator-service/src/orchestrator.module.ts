@@ -7,6 +7,7 @@ import { ClientsModule } from './clients/clients.module';
 import { CacheModule } from './cache/cache.module';
 import { SagaModule } from './saga/saga.module';
 import { DoctorOrchestratorModule } from './command-orchestration/doctor/doctor-orchestrator.module';
+import { ReviewOrchestratorModule } from './command-orchestration/review/review-orchestrator.module';
 import { DoctorCompositeModule } from './read-composition/doctor-composite/doctor-composite.module';
 import { BlogCompositeModule } from './read-composition/blog-composite/blog-composite.module';
 import { QuestionCompositeModule } from './read-composition/question-composite/question-composite.module';
@@ -29,6 +30,7 @@ import { ServicesModule } from './services/services.module';
     CacheModule,
     SagaModule,
     DoctorOrchestratorModule,
+    ReviewOrchestratorModule,
     DoctorCompositeModule,
     BlogCompositeModule,
     QuestionCompositeModule,

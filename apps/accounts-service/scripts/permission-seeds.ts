@@ -400,6 +400,7 @@ const ROLE_PERMISSION_MAPPING = {
       'office-hours:read',
       'schedules:read',
       'schedules:update',
+      'reviews:read',
       'blogs:read',
       'blogs:create',
       'questions:read',

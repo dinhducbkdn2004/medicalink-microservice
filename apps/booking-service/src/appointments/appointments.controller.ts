@@ -147,4 +147,14 @@ export class AppointmentsController {
   ): Promise<PaginatedResponse<DoctorBookingStatsDto>> {
     return this.appointmentsService.getDoctorBookingStatsList(query);
   }
+
+  @MessagePattern(BOOKING_PATTERNS.CHECK_COMPLETED)
+  checkCompleted(
+    @Payload() payload: { email: string; doctorId: string },
+  ): Promise<boolean> {
+    return this.appointmentsService.checkCompleted(
+      payload.email,
+      payload.doctorId,
+    );
+  }
 }

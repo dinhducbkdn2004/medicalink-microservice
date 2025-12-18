@@ -28,7 +28,11 @@ export class ReviewsService {
     return this.reviewRepository.createReview(createReviewDto);
   }
 
-  async getReviews(params: { page: number; limit: number }) {
+  async getReviews(params: {
+    page: number;
+    limit: number;
+    isPublic?: boolean;
+  }) {
     const result = await this.reviewRepository.findAllReviews(params);
     const hasNext = params.page * params.limit < result.total;
     const hasPrev = params.page > 1;
@@ -49,6 +53,7 @@ export class ReviewsService {
     page: number;
     limit: number;
     doctorId: string;
+    isPublic?: boolean;
   }) {
     await this.ensureDoctorExists(String(params.doctorId));
     const result = await this.reviewRepository.findReviewsByDoctorId(params);

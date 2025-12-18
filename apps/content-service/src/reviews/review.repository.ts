@@ -20,6 +20,7 @@ export class ReviewRepository {
         authorName: data.authorName,
         authorEmail: data.authorEmail,
         doctorId: data.doctorId,
+        isPublic: (data as any).isPublic,
       },
     });
 
@@ -40,13 +41,15 @@ export class ReviewRepository {
     limit: number;
     doctorId?: string;
     authorEmail?: string;
+    isPublic?: boolean;
   }) {
-    const { page, limit, doctorId, authorEmail } = params;
+    const { page, limit, doctorId, authorEmail, isPublic } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {};
     if (doctorId) where.doctorId = doctorId;
     if (authorEmail) where.authorEmail = authorEmail;
+    if (typeof isPublic !== 'undefined') where.isPublic = isPublic;
 
     const [reviews, total] = await Promise.all([
       this.prisma.review.findMany({
@@ -82,20 +85,24 @@ export class ReviewRepository {
     doctorId: string;
     page: number;
     limit: number;
+    isPublic?: boolean;
   }) {
-    const { doctorId, page, limit } = params;
+    const { doctorId, page, limit, isPublic } = params;
     const skip = (page - 1) * limit;
+
+    const where: any = { doctorId };
+    if (typeof isPublic !== 'undefined') where.isPublic = isPublic;
 
     const [reviews, total] = await Promise.all([
       this.prisma.review.findMany({
-        where: { doctorId },
+        where,
         skip,
         take: limit,
         orderBy: {
           createdAt: 'desc',
         },
       }),
-      this.prisma.review.count({ where: { doctorId } }),
+      this.prisma.review.count({ where }),
     ]);
 
     const dataWithAssets = await Promise.all(

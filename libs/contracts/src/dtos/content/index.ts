@@ -41,6 +41,7 @@ export * from './blog-query.dto';
 export * from './blog-public-query.dto';
 export * from './get-questions-query.dto';
 export * from './get-answers-query.dto';
+export * from './get-reviews-query.dto';
 
 // Misc DTOs
 export * from './update-blog-status.dto';

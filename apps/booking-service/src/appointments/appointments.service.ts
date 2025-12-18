@@ -152,6 +152,30 @@ export class AppointmentsService {
     });
   }
 
+  async checkCompleted(email: string, doctorId: string): Promise<boolean> {
+    this.logger.log(
+      `Checking completed appointment for ${email} and doctor ${doctorId}`,
+    );
+    if (!email || !doctorId) return false;
+
+    const patient = await this.prisma.patient.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    if (!patient) return false;
+
+    const count = await this.prisma.appointment.count({
+      where: {
+        patientId: patient.id,
+        doctorId,
+        status: AppointmentStatus.COMPLETED,
+      },
+    });
+
+    return count > 0;
+  }
+
   async createAppointmentFromEvent(dto: {
     eventId: string;
     patientId: string;

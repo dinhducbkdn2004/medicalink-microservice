@@ -34,4 +34,11 @@ export class CreateReviewDto {
 
   @IsCuid({ message: 'Doctor ID must be a valid CUID' })
   doctorId: string;
+
+  @IsCuid({ message: 'Doctor Profile ID must be a valid CUID' })
+  @IsOptional()
+  doctorProfileId?: string;
+
+  @IsOptional()
+  isPublic?: boolean;
 }

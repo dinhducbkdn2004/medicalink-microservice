@@ -8,6 +8,9 @@ export const ORCHESTRATOR_PATTERNS = {
   DOCTOR_UPDATE: 'orchestrator.doctor.update',
   DOCTOR_DELETE: 'orchestrator.doctor.delete',
 
+  // Review orchestration
+  REVIEW_CREATE: 'orchestrator.review.create',
+
   // Doctor composition (read)
   DOCTOR_GET_COMPOSITE: 'orchestrator.doctor.getComposite',
   DOCTOR_LIST_COMPOSITE: 'orchestrator.doctor.listComposite',

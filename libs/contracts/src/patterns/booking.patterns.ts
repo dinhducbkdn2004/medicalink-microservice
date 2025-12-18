@@ -9,6 +9,7 @@ export const BOOKING_PATTERNS = {
   RESCHEDULE_APPOINTMENT: 'booking.appointment.reschedule',
   LIST_APPOINTMENTS: 'booking.appointment.list',
   LIST_APPOINTMENTS_BY_FILTER: 'booking.appointment.listByFilter',
+  CHECK_COMPLETED: 'booking.appointment.checkCompleted',
 
   // Booking by doctor
   BOOK_BY_DOCTOR: 'booking.by.doctor',

@@ -9,8 +9,17 @@ import {
   Query,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { PaginationDto, Public, RequireDeletePermission } from '@app/contracts';
-import { CreateReviewDto, REVIEWS_PATTERNS } from '@app/contracts';
+import {
+  Public,
+  RequireDeletePermission,
+  RequireReadPermission,
+  GetReviewsQueryDto,
+} from '@app/contracts';
+import {
+  CreateReviewDto,
+  REVIEWS_PATTERNS,
+  ORCHESTRATOR_PATTERNS,
+} from '@app/contracts';
 import { MicroserviceService } from '../utils/microservice.service';
 import { PublicCreateThrottle } from '../utils/custom-throttle.decorator';
 
@@ -18,6 +27,8 @@ import { PublicCreateThrottle } from '../utils/custom-throttle.decorator';
 export class ReviewsController {
   constructor(
     @Inject('CONTENT_SERVICE') private readonly contentClient: ClientProxy,
+    @Inject('ORCHESTRATOR_SERVICE')
+    private readonly orchestratorClient: ClientProxy,
     private readonly microserviceService: MicroserviceService,
   ) {}
 
@@ -27,18 +38,18 @@ export class ReviewsController {
   @Post()
   async create(@Body() dto: CreateReviewDto) {
     return this.microserviceService.sendWithTimeout(
-      this.contentClient,
-      REVIEWS_PATTERNS.CREATE,
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.REVIEW_CREATE,
       dto,
     );
   }
 
-  // Public - list reviews by doctor
-  @Public()
+  // List reviews by doctor
+  @RequireReadPermission('reviews')
   @Get('/doctor/:doctorId')
   async getByDoctor(
     @Param('doctorId') doctorId: string,
-    @Query() query: PaginationDto,
+    @Query() query: GetReviewsQueryDto,
   ) {
     return this.microserviceService.sendWithTimeout(
       this.contentClient,
@@ -47,8 +58,7 @@ export class ReviewsController {
     );
   }
 
-  // Public - get review by id
-  @Public()
+  @RequireReadPermission('reviews')
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.microserviceService.sendWithTimeout(

@@ -14,17 +14,30 @@ export class ReviewsController {
   }
 
   @MessagePattern(REVIEWS_PATTERNS.GET_LIST)
-  async getReviews(@Payload() payload: { page?: number; limit?: number }) {
-    const { page = 1, limit = 10 } = payload;
-    return this.reviewsService.getReviews({ page, limit });
+  async getReviews(
+    @Payload() payload: { page?: number; limit?: number; isPublic?: boolean },
+  ) {
+    const { page = 1, limit = 10, isPublic } = payload;
+    return this.reviewsService.getReviews({ page, limit, isPublic });
   }
 
   @MessagePattern(REVIEWS_PATTERNS.GET_BY_DOCTOR)
   async getReviewsByDoctor(
-    @Payload() payload: { doctorId: string; page?: number; limit?: number },
+    @Payload()
+    payload: {
+      doctorId: string;
+      page?: number;
+      limit?: number;
+      isPublic?: boolean;
+    },
   ) {
-    const { doctorId, page = 1, limit = 10 } = payload;
-    return this.reviewsService.getReviewsByDoctor({ doctorId, page, limit });
+    const { doctorId, page = 1, limit = 10, isPublic } = payload;
+    return this.reviewsService.getReviewsByDoctor({
+      doctorId,
+      page,
+      limit,
+      isPublic,
+    });
   }
 
   @MessagePattern(REVIEWS_PATTERNS.GET_BY_ID)
