@@ -35,7 +35,6 @@ export class ContentStatsService {
    * Uses single optimized raw SQL query
    */
   async getAllStatsByDoctor(payload: {
-    doctorId: string;
     authorId: string;
   }): Promise<DoctorContentStats> {
     // Single query to get all stats at once
@@ -55,9 +54,9 @@ export class ContentStatsService {
         COALESCE(COUNT(DISTINCT CASE WHEN a.is_accepted = true THEN a.id END), 0) as "totalAcceptedAnswers",
         COALESCE(COUNT(DISTINCT b.id), 0) as "totalBlogs"
       FROM (SELECT 1) AS dummy
-      LEFT JOIN reviews r ON r.doctor_id = ${payload.doctorId}
+      LEFT JOIN reviews r ON r.doctor_id = ${payload.authorId}
       LEFT JOIN answers a ON a.author_id = ${payload.authorId}
-      LEFT JOIN blogs b ON b.author_id = ${payload.doctorId} AND b.status = 'PUBLISHED'
+      LEFT JOIN blogs b ON b.author_id = ${payload.authorId} AND b.status = 'PUBLISHED'
     `;
 
     const stats = result[0] || {

@@ -9,11 +9,17 @@ import {
   Query,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { Throttle } from '@nestjs/throttler';
 import {
   Public,
   RequireDeletePermission,
   RequireReadPermission,
+  CurrentUser,
   GetReviewsQueryDto,
+  AnalyzeReviewDto,
+  GetReviewAnalysesQueryDto,
+  type JwtPayloadDto,
+  RequirePermission,
 } from '@app/contracts';
 import {
   CreateReviewDto,
@@ -75,6 +81,48 @@ export class ReviewsController {
     return this.microserviceService.sendWithTimeout(
       this.contentClient,
       REVIEWS_PATTERNS.DELETE,
+      { id },
+    );
+  }
+
+  // Analyze reviews - requires 'reviews:analyze' permission
+  @RequirePermission('reviews', 'analyze')
+  @Throttle({ default: { limit: 5, ttl: 3600000 } }) // 5 per hour
+  @Post('analyze')
+  async analyzeReviews(
+    @Body() dto: AnalyzeReviewDto,
+    @CurrentUser() user: JwtPayloadDto,
+  ) {
+    return this.microserviceService.sendWithTimeout(
+      this.contentClient,
+      REVIEWS_PATTERNS.ANALYZE,
+      { dto, userId: user.sub },
+      { timeoutMs: 15000 }, // 15 second timeout for AI operations
+    );
+  }
+
+  // Get historical analyses - requires 'reviews:read' permission
+  // Uses orchestrator for read composition (populates creator name)
+  @RequireReadPermission('reviews')
+  @Get(':doctorId/analyses')
+  async getReviewAnalyses(
+    @Param('doctorId') doctorId: string,
+    @Query() query: GetReviewAnalysesQueryDto,
+  ) {
+    return this.microserviceService.sendWithTimeout(
+      this.orchestratorClient,
+      ORCHESTRATOR_PATTERNS.REVIEW_ANALYSIS_LIST_COMPOSITE,
+      { doctorId, query },
+    );
+  }
+
+  // Get single analysis by ID - requires 'reviews:read' permission
+  @RequireReadPermission('reviews')
+  @Get('analyses/:id')
+  async getReviewAnalysisById(@Param('id') id: string) {
+    return this.microserviceService.sendWithTimeout(
+      this.contentClient,
+      REVIEWS_PATTERNS.GET_ANALYSIS_BY_ID,
       { id },
     );
   }

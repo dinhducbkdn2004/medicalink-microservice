@@ -285,6 +285,11 @@ const CORE_PERMISSIONS = [
   },
   {
     resource: 'reviews',
+    action: 'analyze',
+    description: 'Analyze reviews',
+  },
+  {
+    resource: 'reviews',
     action: 'manage',
     description: 'Full reviews management access',
   },

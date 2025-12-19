@@ -11,9 +11,7 @@ export class ContentStatsController {
   constructor(private readonly contentStatsService: ContentStatsService) {}
 
   @MessagePattern(CONTENT_STATS_PATTERNS.ALL_BY_DOCTOR)
-  getAllStatsByDoctor(
-    @Payload() payload: { doctorId: string; authorId: string },
-  ) {
+  getAllStatsByDoctor(@Payload() payload: { authorId: string }) {
     return this.contentStatsService.getAllStatsByDoctor(payload);
   }
 

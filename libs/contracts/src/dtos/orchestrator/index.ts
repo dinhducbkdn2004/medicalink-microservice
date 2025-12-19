@@ -1,5 +1,6 @@
 export * from './blog-composite.dto';
 export * from './question-composite.dto';
+export * from './review-analysis-composite.dto';
 export * from './schedule-slots.dto';
 export * from './doctor-composite-query.dto';
 export * from './schedule-slots-public-query.dto';

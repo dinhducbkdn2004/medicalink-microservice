@@ -4,6 +4,8 @@ import {
   ReviewResponseDto,
   CreateReviewDto,
   UpdateReviewDto,
+  ReviewAnalysisResponseDto,
+  ReviewAnalysisMinimalDto,
 } from '@app/contracts';
 import { ReviewOverviewStatsDto } from '@app/contracts';
 
@@ -326,5 +328,164 @@ export class ReviewRepository {
       (id): id is string => typeof id === 'string' && id.trim().length > 0,
     );
     return Array.from(new Set<string>(ids));
+  }
+
+  // Review Analysis Methods
+
+  async findReviewsByDateRange(params: {
+    doctorId: string;
+    startDate: Date;
+    endDate: Date;
+    isPublic?: boolean;
+  }): Promise<
+    Array<{
+      rating: number;
+      body: string | null;
+      isPublic: boolean;
+      createdAt: Date;
+    }>
+  > {
+    const where: any = {
+      doctorId: params.doctorId,
+      createdAt: {
+        gte: params.startDate,
+        lte: params.endDate,
+      },
+    };
+
+    if (typeof params.isPublic !== 'undefined') {
+      where.isPublic = params.isPublic;
+    }
+
+    return this.prisma.review.findMany({
+      where,
+      select: {
+        rating: true,
+        body: true,
+        isPublic: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async createReviewAnalysis(data: {
+    doctorId: string;
+    dateRange: string;
+    includeNonPublic: boolean;
+    period1Total: number;
+    period1Avg: number;
+    period2Total: number;
+    period2Avg: number;
+    totalChange: number;
+    avgChange: number;
+    summary: string;
+    advantages: string;
+    disadvantages: string;
+    changes: string;
+    recommendations: string;
+    createdBy: string;
+  }): Promise<ReviewAnalysisResponseDto> {
+    const analysis = await this.prisma.reviewAnalysis.create({
+      data,
+    });
+
+    return this.transformReviewAnalysisResponse(analysis);
+  }
+
+  async findReviewAnalysesByDoctor(params: {
+    doctorId: string;
+    page: number;
+    limit: number;
+    dateRange?: string;
+  }) {
+    const { doctorId, page, limit, dateRange } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = { doctorId };
+    if (dateRange) where.dateRange = dateRange;
+
+    const [analyses, total] = await Promise.all([
+      this.prisma.reviewAnalysis.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          doctorId: true,
+          dateRange: true,
+          includeNonPublic: true,
+          summary: true,
+          createdBy: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      this.prisma.reviewAnalysis.count({ where }),
+    ]);
+
+    return {
+      data: analyses.map((a) => this.transformReviewAnalysisMinimal(a)),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async findReviewAnalysisById(
+    id: string,
+  ): Promise<ReviewAnalysisResponseDto | null> {
+    const analysis = await this.prisma.reviewAnalysis.findUnique({
+      where: { id },
+    });
+
+    if (!analysis) {
+      return null;
+    }
+
+    return this.transformReviewAnalysisResponse(analysis);
+  }
+
+  private transformReviewAnalysisResponse(
+    analysis: any,
+  ): ReviewAnalysisResponseDto {
+    return {
+      id: analysis.id,
+      doctorId: analysis.doctorId,
+      dateRange: analysis.dateRange,
+      includeNonPublic: analysis.includeNonPublic,
+      period1Total: analysis.period1Total,
+      period1Avg: analysis.period1Avg,
+      period2Total: analysis.period2Total,
+      period2Avg: analysis.period2Avg,
+      totalChange: analysis.totalChange,
+      avgChange: analysis.avgChange,
+      summary: analysis.summary,
+      advantages: analysis.advantages,
+      disadvantages: analysis.disadvantages,
+      changes: analysis.changes,
+      recommendations: analysis.recommendations,
+      createdBy: analysis.createdBy,
+      createdAt: analysis.createdAt,
+    };
+  }
+
+  private transformReviewAnalysisMinimal(
+    analysis: any,
+  ): ReviewAnalysisMinimalDto {
+    return {
+      id: analysis.id,
+      doctorId: analysis.doctorId,
+      dateRange: analysis.dateRange,
+      includeNonPublic: analysis.includeNonPublic,
+      summary: analysis.summary,
+      createdBy: analysis.createdBy,
+      createdAt: analysis.createdAt,
+    };
   }
 }

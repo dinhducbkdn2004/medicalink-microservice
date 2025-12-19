@@ -11,6 +11,9 @@ export const ORCHESTRATOR_PATTERNS = {
   // Review orchestration
   REVIEW_CREATE: 'orchestrator.review.create',
 
+  // Review Analysis composition (read)
+  REVIEW_ANALYSIS_LIST_COMPOSITE: 'orchestrator.reviewAnalysis.listComposite',
+
   // Doctor composition (read)
   DOCTOR_GET_COMPOSITE: 'orchestrator.doctor.getComposite',
   DOCTOR_LIST_COMPOSITE: 'orchestrator.doctor.listComposite',

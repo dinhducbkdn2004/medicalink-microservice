@@ -386,12 +386,7 @@ export class PermissionService {
       }
 
       return typeof ownerId === 'string' && ownerId === userId;
-    } catch (error) {
-      this.logger.warn(
-        `Unable to resolve doctor ownership for doctor ${doctorId}: ${
-          error instanceof Error ? error.message : 'unknown error'
-        }`,
-      );
+    } catch {
       return undefined;
     }
   }

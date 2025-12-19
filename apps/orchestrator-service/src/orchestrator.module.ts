@@ -11,6 +11,7 @@ import { ReviewOrchestratorModule } from './command-orchestration/review/review-
 import { DoctorCompositeModule } from './read-composition/doctor-composite/doctor-composite.module';
 import { BlogCompositeModule } from './read-composition/blog-composite/blog-composite.module';
 import { QuestionCompositeModule } from './read-composition/question-composite/question-composite.module';
+import { ReviewAnalysisCompositeModule } from './read-composition/review-analysis-composite/review-analysis-composite.module';
 import { ScheduleCompositeModule } from './read-composition/schedule-composite/schedule-composite.module';
 import { AppointmentCompositeModule } from './read-composition/appointment-composite/appointment-composite.module';
 import { StatsCompositeModule } from './read-composition/stats-composite/stats-composite.module';
@@ -34,6 +35,7 @@ import { ServicesModule } from './services/services.module';
     DoctorCompositeModule,
     BlogCompositeModule,
     QuestionCompositeModule,
+    ReviewAnalysisCompositeModule,
     ScheduleCompositeModule,
     AppointmentCompositeModule,
     StatsCompositeModule,

@@ -12,6 +12,8 @@ export const CACHE_PREFIXES = {
   BLOG_COMPOSITE_LIST: 'blog:composite:list:',
   QUESTION_COMPOSITE: 'question:composite:',
   QUESTION_COMPOSITE_LIST: 'question:composite:list:',
+  REVIEW_ANALYSIS_COMPOSITE: 'review-analysis:composite:',
+  REVIEW_ANALYSIS_COMPOSITE_LIST: 'review-analysis:composite:list:',
   SCHEDULE_SLOTS_LIST: 'scheduleSlots:list:',
 } as const;
 

@@ -96,7 +96,7 @@ export class StatsCompositeService {
   async getOneDoctorStats(
     doctorStaffAccountId: string,
   ): Promise<DoctorMyStatsDto> {
-    const [bookingStats, doctorProfile] = await Promise.all([
+    const [bookingStats, contentStats] = await Promise.all([
       this.clientHelper
         .send<DoctorBookingStatsDto>(
           this.bookingClient,
@@ -114,42 +114,30 @@ export class StatsCompositeService {
           completedRate: 0,
         })),
       this.clientHelper
-        .send<DoctorProfileResponseDto>(
-          this.providerClient,
-          DOCTOR_PROFILES_PATTERNS.GET_BY_ACCOUNT_ID,
-          { staffAccountId: doctorStaffAccountId },
-          { timeoutMs: 5000 },
+        .send<{
+          reviews: { totalReviews: number; averageRating: number };
+          answers: {
+            totalAnswers: number;
+            totalAcceptedAnswers: number;
+            answerAcceptedRate: number;
+          };
+          blogs: number;
+        }>(
+          this.contentClient,
+          CONTENT_STATS_PATTERNS.ALL_BY_DOCTOR,
+          { authorId: doctorStaffAccountId },
+          { timeoutMs: 8000 },
         )
-        .catch(() => null),
+        .catch(() => ({
+          reviews: { totalReviews: 0, averageRating: 0 },
+          answers: {
+            totalAnswers: 0,
+            totalAcceptedAnswers: 0,
+            answerAcceptedRate: 0,
+          },
+          blogs: 0,
+        })),
     ]);
-
-    const doctorId = doctorProfile?.id ?? doctorStaffAccountId;
-
-    // Single call to get ALL content stats (reviews + answers + blogs)
-    const contentStats = await this.clientHelper
-      .send<{
-        reviews: { totalReviews: number; averageRating: number };
-        answers: {
-          totalAnswers: number;
-          totalAcceptedAnswers: number;
-          answerAcceptedRate: number;
-        };
-        blogs: number;
-      }>(
-        this.contentClient,
-        CONTENT_STATS_PATTERNS.ALL_BY_DOCTOR,
-        { doctorId, authorId: doctorStaffAccountId },
-        { timeoutMs: 8000 },
-      )
-      .catch(() => ({
-        reviews: { totalReviews: 0, averageRating: 0 },
-        answers: {
-          totalAnswers: 0,
-          totalAcceptedAnswers: 0,
-          answerAcceptedRate: 0,
-        },
-        blogs: 0,
-      }));
 
     return {
       booking: {

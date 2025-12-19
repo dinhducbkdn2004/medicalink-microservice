@@ -1,7 +1,13 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ReviewsService } from './reviews.service';
-import { CreateReviewDto, ReviewOverviewStatsDto } from '@app/contracts';
+import {
+  CreateReviewDto,
+  ReviewOverviewStatsDto,
+  AnalyzeReviewDto,
+  ReviewAnalysisResponseDto,
+  GetReviewAnalysesQueryDto,
+} from '@app/contracts';
 import { REVIEWS_PATTERNS } from '@app/contracts/patterns';
 
 @Controller('reviews')
@@ -53,5 +59,27 @@ export class ReviewsController {
   @MessagePattern(REVIEWS_PATTERNS.STATS_OVERVIEW)
   async getReviewOverview(): Promise<ReviewOverviewStatsDto> {
     return this.reviewsService.getReviewOverview();
+  }
+
+  @MessagePattern(REVIEWS_PATTERNS.ANALYZE)
+  async analyzeReviews(
+    @Payload() payload: { dto: AnalyzeReviewDto; userId: string },
+  ): Promise<ReviewAnalysisResponseDto> {
+    return this.reviewsService.analyzeReviews(payload.dto, payload.userId);
+  }
+
+  @MessagePattern(REVIEWS_PATTERNS.GET_ANALYSES_BY_DOCTOR)
+  async getReviewAnalysesByDoctor(
+    @Payload() payload: { doctorId: string; query: GetReviewAnalysesQueryDto },
+  ) {
+    return this.reviewsService.getReviewAnalysesByDoctor(
+      payload.doctorId,
+      payload.query,
+    );
+  }
+
+  @MessagePattern(REVIEWS_PATTERNS.GET_ANALYSIS_BY_ID)
+  async getReviewAnalysisById(@Payload() payload: { id: string }) {
+    return this.reviewsService.getReviewAnalysisById(payload.id);
   }
 }

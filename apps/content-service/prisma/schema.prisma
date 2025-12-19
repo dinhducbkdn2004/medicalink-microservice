@@ -102,6 +102,36 @@ model Review {
   @@map("reviews")
 }
 
+model ReviewAnalysis {
+  id                String   @id @default(cuid())
+  doctorId          String   @map("doctor_id") @db.VarChar(27)
+  dateRange         String   @map("date_range") @db.VarChar(10)
+  includeNonPublic  Boolean  @default(false) @map("include_non_public")
+
+  // Statistical data
+  period1Total      Int      @map("period1_total")
+  period1Avg        Float    @map("period1_avg")
+  period2Total      Int      @map("period2_total")
+  period2Avg        Float    @map("period2_avg")
+  totalChange       Int      @map("total_change")
+  avgChange         Float    @map("avg_change")
+
+  // AI Analysis results
+  summary           String   @db.Text
+  advantages        String   @db.Text
+  disadvantages     String   @db.Text
+  changes           String   @db.Text
+  recommendations   String   @db.Text
+
+  // Metadata
+  createdBy         String   @map("created_by") @db.VarChar(27)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([doctorId, createdAt], map: "idx_review_analysis_doctor_created")
+  @@index([dateRange], map: "idx_review_analysis_date_range")
+  @@map("review_analyses")
+}
+
 // Asset entity type for polymorphic association
 enum AssetEntityType {
   BLOG

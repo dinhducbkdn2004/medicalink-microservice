@@ -45,3 +45,9 @@ export * from './get-reviews-query.dto';
 
 // Misc DTOs
 export * from './update-blog-status.dto';
+
+// Review Analysis DTOs
+export * from './analyze-review.dto';
+export * from './review-analysis-response.dto';
+export * from './review-analysis-minimal.dto';
+export * from './get-review-analyses-query.dto';
